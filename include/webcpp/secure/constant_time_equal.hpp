@@ -75,7 +75,7 @@ template <byte_sequence Sequence>
                   }) {
         return sequence.bytes();
     } else {
-        return (sequence);
+        return static_cast<Sequence const&>(sequence);
     }
 }
 
