@@ -176,7 +176,10 @@ template <detail::mask_word U>
  * The entry of a table at an index, reading every entry in order so that neither the time nor
  * the addresses read depend on the index: an alphabet, a generator's constants.
  *
- * Its cost is the table's size. An index past the table selects no entry.
+ * Its cost is the table's size. An index past the table selects no entry. The index is compared
+ * in the wider of `std::size_t` and `Element`, so that the mask covers every bit of an entry
+ * wider than `std::size_t` (a 64-bit entry on WebAssembly's 32-bit `std::size_t`) and narrows
+ * to all ones for a narrower one.
  *
  * @tparam Element The entries' type: any unsigned integral type but `bool`.
  * @tparam N The table's extent, or `std::dynamic_extent`.
@@ -187,9 +190,12 @@ template <detail::mask_word U>
 template <detail::mask_word Element, std::size_t N>
 [[nodiscard]] constexpr Element lookup(std::span<Element const, N> table,
                                        std::size_t index) noexcept {
+    using index_word =
+        std::conditional_t<(sizeof(Element) > sizeof(std::size_t)), Element, std::size_t>;
     Element result{};
     for (std::size_t position = 0; position < table.size(); ++position) {
-        auto const keep = static_cast<Element>(is_equal_mask<std::size_t>(position, index));
+        auto const keep = static_cast<Element>(is_equal_mask<index_word>(
+            static_cast<index_word>(position), static_cast<index_word>(index)));
         result = static_cast<Element>(result | static_cast<Element>(table[position] & keep));
     }
     return result;

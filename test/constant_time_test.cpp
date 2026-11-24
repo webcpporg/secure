@@ -63,6 +63,10 @@ constexpr std::array<std::uint8_t, 4> small_table{10, 20, 30, 40};
 static_assert(constant_time::lookup(std::span<std::uint8_t const, 4>(small_table), 2) == 30);
 static_assert(constant_time::lookup(std::span<std::uint8_t const, 4>(small_table), 4) == 0);
 static_assert(constant_time::lookup(std::span<std::uint8_t const>(small_table), 0) == 10);
+// An entry wider than std::size_t (WebAssembly's is 32 bits) keeps its top bits.
+constexpr std::array<std::uint64_t, 2> wide_table{0xFEDCBA9876543210U, 1};
+static_assert(constant_time::lookup(std::span<std::uint64_t const, 2>(wide_table), 0) ==
+              0xFEDCBA9876543210U);
 
 constexpr std::array<std::uint8_t, 3> three_a{1, 2, 3};
 constexpr std::array<std::uint8_t, 3> three_b{1, 2, 4};
@@ -176,6 +180,7 @@ void lookups() {
     }
     check_lookup(words);
     check_lookup(std::array<std::uint8_t, 1>{0xFF});
+    // Wider than WebAssembly's std::size_t: the mask covers the entry's top half too.
     check_lookup(std::array<std::uint64_t, 1>{0xFEDCBA9876543210U});
     // The entry at the top of a narrow element: the size_t mask narrowed keeps every bit.
     check_lookup(std::array<std::uint16_t, 2>{0xFFFF, 0x8001});
