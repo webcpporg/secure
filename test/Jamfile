@@ -69,4 +69,13 @@ secure-run secret : secret_test.cpp : $(OPTIMISED) <inlining>full ;
 # The wipe's test seam (B9): every wipe reported once, its bytes already zero.
 secure-run wipe_record : wipe_record_test.cpp
   : <define>WEBCPP_SECURE_TEST_WIPE_RECORD ;
+# constant_time_equal over any two byte sequences, its guard through the seam.
+secure-run constant_time_equal : constant_time_equal_test.cpp ;
+# declassify with the memcheck build's marks, on every lane, against a stand-in
+# for Valgrind's header; and with MemorySanitizer's under clang natively.
+secure-run declassify_compile : declassify_compile_test.cpp
+  : <define>WEBCPP_SECURE_CT_VALGRIND <include>support/valgrind_stub ;
+secure-compile declassify_compile_msan : declassify_compile_test.cpp
+  : <define>WEBCPP_SECURE_CT_MSAN <toolset>gcc:<build>no <toolset>msvc:<build>no
+  : native ;
 build-project messages ;
