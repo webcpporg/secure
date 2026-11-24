@@ -150,12 +150,14 @@ void test_move_secret() {
     for (auto& byte : target.writable()) {
         byte = 0xc3;
     }
+    void const* const source_at = &source;
+    void const* const target_at = &target;
     clear();
     target = std::move(source);
     // The target's old bytes first, then the source after the move.
     BOOST_TEST_EQ(wipes.count, 2U);
-    BOOST_TEST(wipes.entries[0].at == &target);
-    BOOST_TEST(wipes.entries[1].at == &source);
+    BOOST_TEST(wipes.entries[0].at == target_at);
+    BOOST_TEST(wipes.entries[1].at == source_at);
     for (std::size_t i = 0; i < 2; ++i) {
         BOOST_TEST_EQ(wipes.entries[i].size, 16U);
         BOOST_TEST(wipes.entries[i].zero);
@@ -165,7 +167,7 @@ void test_move_secret() {
     clear();
     secure::secret<16> const taker(std::move(target));
     BOOST_TEST_EQ(wipes.count, 1U);
-    BOOST_TEST(wipes.entries[0].at == &target);
+    BOOST_TEST(wipes.entries[0].at == target_at);
     BOOST_TEST_EQ(wipes.entries[0].size, 16U);
     BOOST_TEST(wipes.entries[0].zero);
     BOOST_TEST_EQ(taker.bytes()[0], 0x5a);
