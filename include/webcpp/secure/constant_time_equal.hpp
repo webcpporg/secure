@@ -61,23 +61,40 @@ struct byte_view {
 };
 
 /**
- Views a sequence as its `bytes()` when it has one, else as its range.
+ Holds a sequence's `bytes()` result, or the sequence itself when it has no `bytes()`.
+
+ The caller binds the result with `auto&&`, which extends the life of a result returned by value.
 
  @param sequence The sequence.
- @return Its bytes' address and size; nothing is read.
+ @return Its `bytes()` result, else a reference to it.
 */
 template <byte_sequence Sequence>
-[[nodiscard]] constexpr auto view_bytes(Sequence const& sequence) noexcept {
+[[nodiscard]] constexpr decltype(auto) held_bytes(Sequence const& sequence) noexcept {
     if constexpr (requires {
                       { sequence.bytes() } -> std::convertible_to<std::span<std::uint8_t const>>;
                   }) {
-        std::span<std::uint8_t const> const bytes = sequence.bytes();
+        return sequence.bytes();
+    } else {
+        return (sequence);
+    }
+}
+
+/**
+ Views what `held_bytes` returned: the address and size of its bytes.
+
+ @param held The held result, which must outlive the view.
+ @return Its bytes' address and size; nothing is read.
+*/
+template <class Held>
+[[nodiscard]] constexpr auto view_bytes(Held const& held) noexcept {
+    if constexpr (std::convertible_to<Held const&, std::span<std::uint8_t const>>) {
+        std::span<std::uint8_t const> const bytes = held;
         return byte_view<std::uint8_t>{.first = bytes.data(), .count = bytes.size()};
     } else {
-        using element = std::remove_cv_t<std::ranges::range_value_t<Sequence const&>>;
+        using element = std::remove_cv_t<std::ranges::range_value_t<Held const&>>;
         return byte_view<element>{
-            .first = std::ranges::data(sequence),
-            .count = std::ranges::size(sequence),
+            .first = std::ranges::data(held),
+            .count = std::ranges::size(held),
         };
     }
 }
@@ -106,8 +123,10 @@ template <class First, class Second>
 [[nodiscard]] bool constant_time_equal(First const& first_operand,
                                        Second const& second_operand) noexcept {
     timing_guard const timing_scope;
-    auto const first = detail::view_bytes(first_operand);
-    auto const second = detail::view_bytes(second_operand);
+    auto&& first_held = detail::held_bytes(first_operand);
+    auto&& second_held = detail::held_bytes(second_operand);
+    auto const first = detail::view_bytes(first_held);
+    auto const second = detail::view_bytes(second_held);
     if (first.count != second.count) {
         return false;
     }

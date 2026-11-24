@@ -58,6 +58,15 @@ struct null_sequence {
 
 static_assert(secure::detail::byte_sequence<null_sequence>);
 
+/** A type whose `bytes()` returns its bytes by value, as crypto's ed25519 public key does. */
+struct by_value_bytes {
+    std::array<std::uint8_t, 32> stored;
+
+    [[nodiscard]] std::array<std::uint8_t, 32> bytes() const { return stored; }
+};
+
+static_assert(secure::detail::byte_sequence<by_value_bytes>);
+
 secure::secret<32> make_secret(std::uint8_t first) {
     secure::secret<32> made;
     auto const bytes = made.writable();
@@ -150,6 +159,24 @@ void mixed_pairs() {
     BOOST_TEST(secure::constant_time_equal(secret_bytes, digest));
 }
 
+void bytes_by_value() {
+    auto const base = base_bytes();
+    by_value_bytes const same{base};
+    BOOST_TEST(secure::constant_time_equal(same, by_value_bytes{base}));
+    BOOST_TEST(secure::constant_time_equal(same, same));
+    BOOST_TEST(secure::constant_time_equal(same, std::span<std::uint8_t const>(base)));
+    BOOST_TEST(secure::constant_time_equal(std::span<std::uint8_t const>(base), same));
+    for (std::size_t byte = 0; byte < base.size(); ++byte) {
+        for (unsigned bit = 0; bit < 8; ++bit) {
+            auto flipped = base;
+            flipped[byte] ^= static_cast<std::uint8_t>(1U << bit);
+            BOOST_TEST(!secure::constant_time_equal(same, by_value_bytes{flipped}));
+            BOOST_TEST(!secure::constant_time_equal(same, std::span<std::uint8_t const>(flipped)));
+            BOOST_TEST(!secure::constant_time_equal(std::span<std::uint8_t const>(flipped), same));
+        }
+    }
+}
+
 void sizes() {
     std::array<std::uint8_t, 32> const thirty_two = base_bytes();
     std::span<std::uint8_t const> const thirty_one(thirty_two.data(), 31);
@@ -225,6 +252,7 @@ int main() {
 
     shapes();
     mixed_pairs();
+    bytes_by_value();
     sizes();
     guard_through_the_seam();
     return webcpp::test::exit_status(boost::report_errors());
