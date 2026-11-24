@@ -42,7 +42,6 @@
  The side-channel and secret-in-memory primitives that webcpp's libraries
  share.
 */
-namespace webcpp::secure {
-}  // namespace webcpp::secure
+namespace webcpp::secure {}  // namespace webcpp::secure
 
 #endif  // WEBCPP_SECURE_CONFIG_HPP
