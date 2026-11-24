@@ -8,7 +8,7 @@
  The configuration of secure, which each of its headers includes first: whether
  secure is built without exceptions.
 
- @see "Targets", in the guide.
+ @see "Exceptions", in the guide.
 */
 #ifndef WEBCPP_SECURE_CONFIG_HPP
 #define WEBCPP_SECURE_CONFIG_HPP
@@ -28,7 +28,7 @@
  nothing in it. It is provided so that a program can set it for every webcpp
  library alike.
 
- @see "Targets", in the guide.
+ @see "Exceptions", in the guide.
 */
 #define WEBCPP_SECURE_NO_EXCEPTIONS
 #undef WEBCPP_SECURE_NO_EXCEPTIONS
@@ -37,5 +37,12 @@
 #if !defined(WEBCPP_HAS_EXCEPTIONS) && !defined(WEBCPP_SECURE_NO_EXCEPTIONS)
 #define WEBCPP_SECURE_NO_EXCEPTIONS
 #endif
+
+/**
+ The side-channel and secret-in-memory primitives that webcpp's libraries
+ share.
+*/
+namespace webcpp::secure {
+}  // namespace webcpp::secure
 
 #endif  // WEBCPP_SECURE_CONFIG_HPP

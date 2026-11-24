@@ -21,6 +21,12 @@ its timing and its secrets in memory do not leak.
 The <<reference,reference>> that closes this page lists every name the headers
 declare.
 
+== Exceptions
+
+secure raises no exception: every function is `noexcept`. It builds the same
+with exceptions on and off, and `WEBCPP_SECURE_NO_EXCEPTIONS` is defined when
+webcpp has none, or when a program defines it alone.
+
 [#reference]
 == Reference
 
