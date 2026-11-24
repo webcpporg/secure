@@ -23,6 +23,7 @@
 #include <ranges>
 #include <span>
 #include <type_traits>
+#include <utility>
 
 namespace webcpp::secure {
 
@@ -75,7 +76,7 @@ template <byte_sequence Sequence>
                   }) {
         return sequence.bytes();
     } else {
-        return static_cast<Sequence const&>(sequence);
+        return std::as_const(sequence);
     }
 }
 
