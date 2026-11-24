@@ -12,6 +12,8 @@
 #define WEBCPP_SECURE_HPP
 
 #include <webcpp/secure/config.hpp>
+#include <webcpp/secure/erase_secret.hpp>
+#include <webcpp/secure/secret.hpp>
 #include <webcpp/secure/timing_guard.hpp>
 
 #endif  // WEBCPP_SECURE_HPP

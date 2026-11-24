@@ -57,3 +57,16 @@ webcpp.compile config_all_off : config_test.cpp
   : <define>WEBCPP_NO_EXCEPTIONS <define>WEBCPP_TEST_SECURE_ALL_OFF ;
 webcpp.compile config_developer_defined : config_test.cpp
   : <define>WEBCPP_SECURE_NO_EXCEPTIONS <define>WEBCPP_TEST_SECURE_DEVELOPER_DEFINED ;
+
+OPTIMISED = <optimization>speed <toolset>emscripten:<debug-symbols>off ;
+# secure::erase_secret zeroes the bytes of any contiguous range the program may
+# write, and a buffer erased as its scope ends stays zero: optimised, with every
+# call inlined, where a wipe the compiler could drop as a dead store would be.
+secure-run erase_secret : erase_secret_test.cpp : $(OPTIMISED) <inlining>full ;
+# secret<N>: not copyable, moves wipe the source, the destructor wipes the
+# storage; optimised and inlined as erase_secret's.
+secure-run secret : secret_test.cpp : $(OPTIMISED) <inlining>full ;
+# The wipe's test seam (B9): every wipe reported once, its bytes already zero.
+secure-run wipe_record : wipe_record_test.cpp
+  : <define>WEBCPP_SECURE_TEST_WIPE_RECORD ;
+build-project messages ;
