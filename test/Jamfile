@@ -1,0 +1,39 @@
+# Copyright (c) 2026 WebCpp.org
+#
+# Distributed under the Boost Software License, Version 1.0. (See
+# accompanying file LICENSE_1_0.txt or copy at
+# https://www.boost.org/LICENSE_1_0.txt)
+
+project : requirements <library>/webcpp/secure//secure ;
+
+import webcpp ;
+
+webcpp.targets native wasip2 wasip3 emscripten ;
+
+# Every program that runs, runs with exceptions on and off, and every check
+# that compiles, compiles both ways: the second has the suffix _no_exceptions
+# and is built with exception-handling=off.
+rule secure-run ( name : sources + : requirements * : targets * )
+{
+    webcpp.run $(name) : $(sources) : $(requirements) : $(targets) ;
+    webcpp.run $(name)_no_exceptions : $(sources)
+      : $(requirements) <exception-handling>off : $(targets) ;
+}
+rule secure-compile ( name : sources + : requirements * : targets * )
+{
+    webcpp.compile $(name) : $(sources) : $(requirements) : $(targets) ;
+    webcpp.compile $(name)_no_exceptions : $(sources)
+      : $(requirements) <exception-handling>off : $(targets) ;
+}
+
+webcpp.headers-alone secure : ../include ;
+
+# config.hpp defines WEBCPP_SECURE_NO_EXCEPTIONS exactly when webcpp has no
+# exceptions, keeps it when a developer defines it, and defines it when
+# WEBCPP_NO_EXCEPTIONS is.
+webcpp.compile config : config_test.cpp ;
+webcpp.compile config_no_exceptions : config_test.cpp : <exception-handling>off ;
+webcpp.compile config_all_off : config_test.cpp
+  : <define>WEBCPP_NO_EXCEPTIONS <define>WEBCPP_TEST_SECURE_ALL_OFF ;
+webcpp.compile config_developer_defined : config_test.cpp
+  : <define>WEBCPP_SECURE_NO_EXCEPTIONS <define>WEBCPP_TEST_SECURE_DEVELOPER_DEFINED ;

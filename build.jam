@@ -1,0 +1,18 @@
+# Copyright (c) 2026 WebCpp.org
+#
+# Distributed under the Boost Software License, Version 1.0. (See
+# accompanying file LICENSE_1_0.txt or copy at
+# https://www.boost.org/LICENSE_1_0.txt)
+
+# secure: the side-channel and secret-in-memory primitives webcpp's libraries
+# share; a program names /webcpp/secure//secure:
+#
+#     exe app : app.cpp /webcpp/secure//secure ;
+
+import webcpp-target ;
+
+project /webcpp/secure ;
+
+# tag::secure[]
+alias secure : : : : <include>include <library>/boost//headers <library>/webcpp/config//config ;
+# end::secure[]
