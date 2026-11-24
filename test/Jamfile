@@ -71,6 +71,14 @@ secure-run wipe_record : wipe_record_test.cpp
   : <define>WEBCPP_SECURE_TEST_WIPE_RECORD ;
 # constant_time_equal over any two byte sequences, its guard through the seam.
 secure-run constant_time_equal : constant_time_equal_test.cpp ;
+# The constant-time building blocks against a plain reference: every pair and
+# triple of bytes, edges and random values of 16, 32 and 64 bits, lookup past
+# its table, the byte comparisons against the standard algorithms.
+secure-run constant_time : constant_time_test.cpp ;
+# With the size assertion off, the byte blocks given unequal sizes read and
+# write nothing and give the zero mask.
+secure-run constant_time_sizes : constant_time_sizes_test.cpp
+  : <define>BOOST_DISABLE_ASSERTS ;
 # declassify with the memcheck build's marks, on every lane, against a stand-in
 # for Valgrind's header; and with MemorySanitizer's under clang natively.
 secure-run declassify_compile : declassify_compile_test.cpp
