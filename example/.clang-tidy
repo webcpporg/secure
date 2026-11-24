@@ -10,12 +10,11 @@
 # destructor, a move or a swap.
 #
 # bugprone-forward-declaration-namespace reports a tag declared and never
-# referenced when another namespace declares one of the same name. Three
-# examples include webcpp::crypto beside hash, and both libraries name their
-# backend tags alike on purpose (backends::openssl, backends::bearssl, each
-# declared and never defined), so every example of both reports the tag it
-# does not name, in either library's header. The check stays on for the
-# library's headers (the aggregate) and its tests.
+# referenced when another namespace declares one of the same name. Libraries
+# that name their tags alike on purpose, each declared and never defined, make
+# an example that includes several of them report the tag it does not name, in
+# either library's header. The check stays on for the library's headers (the
+# aggregate) and its tests.
 ---
 InheritParentConfig: true
 Checks: >

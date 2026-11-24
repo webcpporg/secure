@@ -28,6 +28,26 @@ rule secure-compile ( name : sources + : requirements * : targets * )
 
 webcpp.headers-alone secure : ../include ;
 
+# <webcpp/secure/timing_guard.hpp> compiles first and alone, brings config.hpp,
+# and defines WEBCPP_SECURE_TIMING_COVERED exactly where the guard acts.
+secure-compile timing_guard_header : timing_guard_header_test.cpp ;
+# webcpp::secure::timing_guard, the one DIT guard of webcpp's libraries: it
+# sets DIT for its scope where the CPU has it and leaves the thread's state as
+# it found it; disengaged, it does nothing; nested, in every order; its seam
+# names the guard's function and file; another thread's DIT is untouched
+# (natively, with threads). On a target it does not cover, it is empty.
+secure-run timing_guard : timing_guard_test.cpp ;
+secure-run timing_guard_nesting : timing_guard_nesting_test.cpp ;
+secure-run timing_guard_seam : timing_guard_seam_test.cpp ;
+secure-run timing_guard_threads : timing_guard_threads_test.cpp
+  : <threading>multi : native ;
+# Windows on ARM64: FEAT_DIT read once by an SEH-guarded read of the register,
+# the guard set and kept across sleeps (the Windows ARM64 lane, MSVC 14.3 and
+# 14.5); on every other target, the empty guard.
+secure-run timing_guard_windows : timing_guard_windows_test.cpp ;
+# The test support's recorder: what it counts, and which paths are secure's.
+secure-run timing_seam_support : timing_seam_support_test.cpp ;
+
 # config.hpp defines WEBCPP_SECURE_NO_EXCEPTIONS exactly when webcpp has no
 # exceptions, keeps it when a developer defines it, and defines it when
 # WEBCPP_NO_EXCEPTIONS is.
