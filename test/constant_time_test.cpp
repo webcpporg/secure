@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -33,7 +34,11 @@ concept maskable = requires(U value) { constant_time::is_equal_mask(value, value
 
 static_assert(maskable<std::uint8_t> && maskable<std::uint16_t> && maskable<std::uint32_t> &&
               maskable<std::uint64_t> && maskable<std::size_t>);
-static_assert(!maskable<bool> && !maskable<int> && !maskable<char> && !maskable<std::int64_t>);
+static_assert(!maskable<bool> && !maskable<int> && !maskable<signed char> &&
+              !maskable<std::int64_t>);
+// Plain char is unsigned on some targets (Linux on ARM) and signed on others: it is accepted
+// exactly where it is an unsigned integral type.
+static_assert(maskable<char> == std::unsigned_integral<char>);
 
 template <class Element>
 concept lookup_entry =
