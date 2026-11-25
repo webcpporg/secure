@@ -247,8 +247,9 @@ int run(std::span<char*> const given) {
 
 }  // namespace
 
-// Under Emscripten main's return value is dropped (EXIT_RUNTIME=0): the status reaches node through
-// webcpp::test::exit_status, so that timing_check fails there as it does natively.
+// The status goes through webcpp::test::exit_status, as every test's does: under Emscripten node
+// then ends with it, whatever runs later. Emscripten itself loses only the return value of a main
+// that suspended under Asyncify, which this one does not.
 int main(int argument_count, char** arguments) {
     return webcpp::test::exit_status(
         run(std::span<char*>(arguments, static_cast<std::size_t>(argument_count))));
