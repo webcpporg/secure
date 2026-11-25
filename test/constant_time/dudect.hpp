@@ -72,8 +72,7 @@ inline void serialise() noexcept {
  * @return false where the CPU has DIT and it is set on this thread outside a guard, or not set
  * inside one, so that the program fails rather than measure it; true otherwise: where the CPU has
  * DIT and the guard sets and clears it, where the CPU has none, and where the guard does not
- * apply (not macOS or Linux on arm64: x86, WebAssembly, where the engine decides, and Windows on
- * ARM64).
+ * apply (not arm64 under macOS, Linux or Windows: x86 and WebAssembly, where the engine decides).
  */
 inline bool report_data_independent_timing() noexcept {
 #ifdef WEBCPP_SECURE_TIMING_COVERED
@@ -98,7 +97,8 @@ inline bool report_data_independent_timing() noexcept {
     return set_inside && !outside_set;
 #else
     std::printf(
-        "DIT (data-independent timing): not applicable here (not macOS or Linux on arm64)\n");
+        "DIT (data-independent timing): not applicable here (not arm64 under macOS, Linux or "
+        "Windows)\n");
     return true;
 #endif
 }
