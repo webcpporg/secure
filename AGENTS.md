@@ -18,7 +18,13 @@ specific to secure.
 ## Cautions
 
 - A test is declared through `secure-run` (or `secure-compile`) in `test/Jamfile`, which builds it
-  with exceptions and without.
+  with exceptions and without. The one exception is the own lane `constant-time`
+  (`test/constant_time/`): its programs (memcheck, MemorySanitizer and dudect) are native only,
+  one checker build each, and have no `_no_exceptions` twins; its Jamfile says so.
+- A constant-time path that both checkers run goes in `test/constant_time/paths.hpp`, with its
+  operands marked secret through `test/support/constant_time_marks.hpp`; a planted leak is a
+  `[[gnu::noinline]]` function of its own, which the drivers require the report's first frame to
+  name.
 - A test that defines a seam includes the seam's header first, before any header of secure.
 - `detail` is not API: another library's header never includes it. Test code may call
   `secure::detail::write_dit`.

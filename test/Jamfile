@@ -96,3 +96,5 @@ secure-run allocation : allocation_test.cpp ;
 secure-run convenience_header : convenience_header_test.cpp ;
 
 build-project messages ;
+# The own lane constant-time: memcheck, MemorySanitizer and dudect.
+build-project constant_time ;
