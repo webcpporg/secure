@@ -96,6 +96,8 @@ secure-run allocation : allocation_test.cpp ;
 secure-run convenience_header : convenience_header_test.cpp ;
 
 build-project messages ;
+# On MSVC, each message stops the build (test/msvc); elsewhere nothing is built.
+build-project msvc ;
 # The guard's cost: the correctness test of the program collect.py measures.
 build-project ../bench ;
 # The own lane constant-time: memcheck, MemorySanitizer and dudect.
