@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <new>
 #include <span>
 #include <string_view>
@@ -109,12 +110,13 @@ void control_counts_every_form() {
         BOOST_TEST(block != nullptr);
         ::operator delete[](block, aligned, std::nothrow);
     });
-    expect_counted("a vector's storage", [] {
-        std::vector<std::uint8_t> bytes(16);
-        // A volatile store keeps the optimiser from removing the storage, as it may a new and a
-        // delete nothing observes.
-        static_cast<std::uint8_t volatile*>(bytes.data())[0] = 1;
-        BOOST_TEST_EQ(bytes.size(), 16U);
+    // The standard allocator's storage, which every container takes: not a container's own, since
+    // MSVC's debug library (_ITERATOR_DEBUG_LEVEL 1 or 2) also allocates a proxy per container.
+    expect_counted("std::allocator's storage", [] {
+        std::allocator<std::uint8_t> allocator;
+        std::uint8_t* volatile block = allocator.allocate(16);
+        BOOST_TEST(block != nullptr);
+        allocator.deallocate(block, 16);
     });
     expect_counted("new int[]", [] {
         int const* volatile block = new int[4];
