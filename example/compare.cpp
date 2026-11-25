@@ -13,9 +13,11 @@
 #include <webcpp/secure/declassify.hpp>
 #include <webcpp/secure/secret.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <numeric>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -23,6 +25,8 @@
 namespace secure = webcpp::secure;
 
 // tag::verdict[]
+namespace {
+
 // Whether a received tag is the one computed: the verdict is public, and the caller branches on it.
 bool accept(std::span<std::uint8_t const> computed, std::span<std::uint8_t const> received) {
     bool verdict = secure::constant_time_equal(computed, received);
@@ -32,11 +36,13 @@ bool accept(std::span<std::uint8_t const> computed, std::span<std::uint8_t const
     return verdict;
 }
 
+}  // namespace
+
 // end::verdict[]
 
 int main() {
-    std::array<std::uint8_t, 16> const computed{0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80,
-                                                0x90, 0xa0, 0xb0, 0xc0, 0xd0, 0xe0, 0xf0, 0x01};
+    std::array<std::uint8_t, 16> computed{};
+    std::iota(computed.begin(), computed.end(), std::uint8_t{0x10});
     std::vector<std::uint8_t> received(computed.begin(), computed.end());
 
     // Different containers of bytes compare: an array, a vector, a span, a string_view, a
@@ -63,7 +69,7 @@ int main() {
 
     // A secret is compared through its bytes.
     secure::secret<16> mac;
-    std::copy(computed.begin(), computed.end(), mac.writable().begin());
+    std::ranges::copy(computed, mac.writable().begin());
     std::cout << "secret and array: "
               << (secure::constant_time_equal(mac, computed) ? "equal" : "different") << '\n';
 }

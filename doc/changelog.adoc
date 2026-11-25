@@ -17,7 +17,7 @@ of every version are on webcpp's index page.
 
 // tag::unreleased[]
 * Added webcpp::secure's skeleton and configuration: config.hpp, WEBCPP_SECURE_NO_EXCEPTIONS.
-* Added timing_guard.hpp: the one DIT guard of webcpp's libraries, engaged or not, nested in any order, with a seam for tests, on arm64 under Apple's systems, Linux, Android and Windows, where the CPU has FEAT_DIT.
+* Added timing_guard.hpp: the one DIT guard of webcpp's libraries, engaged or not, nested in any order, with a seam for tests, on arm64 under Apple, Linux, Android and Windows.
 * Added erase_secret.hpp: erase_secret, which zeroes any contiguous trivially copyable range with stores the optimiser keeps, and the wipe's test seam WEBCPP_SECURE_TEST_WIPE_RECORD.
 * Added constant_time_equal.hpp: constant_time_equal, over any two byte sequences, a secret<N> included.
 * Added secret.hpp: secret<N>, N bytes that wipe themselves on destruction and on move.

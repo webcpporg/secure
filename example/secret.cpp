@@ -19,15 +19,19 @@
 
 namespace secure = webcpp::secure;
 
+namespace {
+
 bool all_zero(std::span<std::uint8_t const> bytes) {
     return std::ranges::all_of(bytes, [](std::uint8_t byte) { return byte == 0; });
 }
+
+}  // namespace
 
 int main() {
     // A new secret holds zeros; the library that fills it writes through writable().
     secure::secret<32> key;
     std::ranges::fill(key.writable(), std::uint8_t{0x42});
-    std::cout << "size: " << key.size() << " bytes\n";
+    std::cout << "size: " << secure::secret<32>::size() << " bytes\n";
 
     // A copy is asked for by name; two secrets of the same bytes compare in constant time.
     secure::secret<32> const copy = key.clone();
@@ -35,7 +39,8 @@ int main() {
               << (secure::constant_time_equal(copy, key) ? "yes" : "no") << '\n';
 
     // A move takes the bytes and wipes the source.
-    secure::secret<32> moved = std::move(key);
+    secure::secret<32> const moved = std::move(key);
+    // NOLINTNEXTLINE(bugprone-use-after-move): a moved-from secret is all zeros, by contract.
     std::cout << "moved-from secret is zero: " << (all_zero(key.bytes()) ? "yes" : "no") << '\n';
     std::cout << "the destination has the bytes: "
               << (secure::constant_time_equal(moved, copy) ? "yes" : "no") << '\n';
