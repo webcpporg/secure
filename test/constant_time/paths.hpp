@@ -110,9 +110,13 @@ int word_blocks() {
     U bit = 1;                                         // NOLINT(misc-const-correctness)
     U zero = 0;                                        // NOLINT(misc-const-correctness)
     U mask = ones;                                     // NOLINT(misc-const-correctness)
-    for (std::span<std::uint8_t> const bytes :
-         {writable_bytes_of(high), writable_bytes_of(middle), writable_bytes_of(bit),
-          writable_bytes_of(zero), writable_bytes_of(mask)}) {
+    for (std::span<std::uint8_t> const bytes : {
+             writable_bytes_of(high),
+             writable_bytes_of(middle),
+             writable_bytes_of(bit),
+             writable_bytes_of(zero),
+             writable_bytes_of(mask),
+         }) {
         Checker::mark_secret(bytes);
     }
     char const* const type = type_name<U>();
