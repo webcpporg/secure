@@ -23,29 +23,29 @@ branch on. The word blocks take any unsigned integral type but `bool`
 |===
 | Block | What it gives
 
-| `value_barrier(value)`
+| `value_barrier(word_value)`
 | the value, hidden from the optimiser
 
-| `mask_from_bit(bit)`
+| `mask_from_bit(low_bit)`
 | 0 to the zero mask, 1 to the all-ones mask
 
-| `is_zero_mask(value)`, `is_equal_mask(a, b)`, `is_less_mask(a, b)`
-| the all-ones mask when the word is zero, when two words are equal, when `a < b` as unsigned numbers; else the zero mask
+| `is_zero_mask(word_value)`, `is_equal_mask(first_word, second_word)`, `is_less_mask(first_word, second_word)`
+| the all-ones mask when the word is zero, when two words are equal, when `first_word < second_word` as unsigned numbers; else the zero mask
 
-| `is_in_range_mask(value, low, high)`
-| the all-ones mask when `+low <= value <= high+`: a character class, a digit's range
+| `is_in_range_mask(word_value, low_bound, high_bound)`
+| the all-ones mask when `+low_bound <= word_value <= high_bound+`: a character class, a digit's range
 
-| `select(mask, when_set, when_clear)`
-| `mask ? when_set : when_clear`, without a branch
+| `select(choice_mask, when_set, when_clear)`
+| `choice_mask ? when_set : when_clear`, without a branch
 
-| `lookup(table, index)`
-| `table[index]`, reading every entry in order; a value-initialised element for an index past the table
+| `lookup(table_entries, entry_index)`
+| `table_entries[entry_index]`, reading every entry in order; a value-initialised element for an index past the table
 
-| `select_bytes(mask, destination, when_set, when_clear)`
+| `select_bytes(choice_mask, destination_bytes, when_set, when_clear)`
 | writes one of two byte sequences into a third by a mask
 
-| `equal_mask(a, b)`, `is_zero_mask(bytes)`, `less_mask(a, b)`
-| the all-ones byte mask when two byte sequences are equal, when a sequence is all zeros, when `a < b` as big-endian numbers
+| `equal_mask(first_bytes, second_bytes)`, `is_zero_mask(tested_bytes)`, `less_mask(first_bytes, second_bytes)`
+| the all-ones byte mask when two byte sequences are equal, when a sequence is all zeros, when `first_bytes < second_bytes` as big-endian numbers
 |===
 
 [source,cpp]

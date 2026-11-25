@@ -36,7 +36,7 @@ static_assert(!std::is_move_constructible_v<timing_guard> &&
               "a guard is not movable: the state it restores is its scope's");
 static_assert(std::is_nothrow_default_constructible_v<timing_guard> &&
                   std::is_nothrow_constructible_v<timing_guard, bool>,
-              "a guard is made from nothing or from engaged, and never throws");
+              "a guard is made from nothing or from guard_engaged, and never throws");
 static_assert(!std::is_convertible_v<bool, timing_guard>, "the constructor is explicit");
 static_assert(!std::is_constructible_v<timing_guard, bool, std::source_location> &&
                   !std::is_constructible_v<timing_guard, std::source_location>,

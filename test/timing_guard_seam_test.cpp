@@ -70,7 +70,7 @@ using webcpp::secure::timing_guard;
 using webcpp::secure::test::force_dit;
 
 static_assert(std::is_nothrow_constructible_v<timing_guard, bool, std::source_location>,
-              "with the seam, the constructor takes the guard's location after engaged");
+              "with the seam, the constructor takes the guard's location after guard_engaged");
 
 namespace seam_probe {
 
