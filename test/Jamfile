@@ -94,6 +94,13 @@ secure-compile declassify_compile_msan : declassify_compile_test.cpp
 secure-run allocation : allocation_test.cpp ;
 # <webcpp/secure.hpp> alone brings every header, one name of each used.
 secure-run convenience_header : convenience_header_test.cpp ;
+# No local name in a header hides a program's global: every public header after
+# a global of each one-word name a header's local once had, which MSVC's C4459
+# reports at /W4 /WX (clang and GCC never warn across namespaces).
+secure-run user_globals : user_globals_test.cpp : : native ;
+# With timing_guard's seam, its own parameter, which only the seam compiles.
+secure-run user_globals_seam : user_globals_test.cpp
+  : <define>WEBCPP_TEST_SECURE_USER_GLOBALS_SEAM : native ;
 
 build-project messages ;
 # On MSVC, each message stops the build (test/msvc); elsewhere nothing is built.

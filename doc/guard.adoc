@@ -99,7 +99,7 @@ another thread's.
 Some functions are keyed only by their arguments: a BLAKE2b digest of a call
 that passes a key computes on a secret, and the same call without a key
 computes on public data and must not pay for DIT. Such a function constructs
-the guard with `engaged` false when the call is not keyed,
+the guard with `guard_engaged` false when the call is not keyed,
 `secure::timing_guard const guard\{key_given};`, as the last block of the example
 does with `false`.
 

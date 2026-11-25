@@ -38,17 +38,17 @@ namespace webcpp::secure {
  * a register the compiler kept from before it (BoringSSL's practice).
  *
  * @tparam T The value's type, trivially copyable.
- * @param value The value, derived from secrets, that the code branches on.
+ * @param derived_value The value, derived from secrets, that the code branches on.
  */
 template <class T>
     requires std::is_trivially_copyable_v<T> && (!std::is_const_v<T>)
-void declassify(T& value) noexcept {
+void declassify(T& derived_value) noexcept {
 #ifdef WEBCPP_SECURE_CT_VALGRIND
-    static_cast<void>(VALGRIND_MAKE_MEM_DEFINED(&value, sizeof value));
+    static_cast<void>(VALGRIND_MAKE_MEM_DEFINED(&derived_value, sizeof derived_value));
 #elif defined(WEBCPP_SECURE_CT_MSAN)
-    __msan_unpoison(&value, sizeof value);
+    __msan_unpoison(&derived_value, sizeof derived_value);
 #else
-    static_cast<void>(value);
+    static_cast<void>(derived_value);
 #endif
 }
 

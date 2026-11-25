@@ -130,9 +130,9 @@ inline void write_dit(std::uint64_t dit_value) noexcept {
  */
 inline bool probe_dit() noexcept {
     __try {
-        std::uint64_t volatile const state =
+        std::uint64_t volatile const register_state =
             static_cast<std::uint64_t>(_ReadStatusReg(dit_register));
-        static_cast<void>(state);
+        static_cast<void>(register_state);
         return true;
     } __except (GetExceptionCode() == status_illegal_instruction ? EXCEPTION_EXECUTE_HANDLER
                                                                  : EXCEPTION_CONTINUE_SEARCH) {
@@ -218,29 +218,29 @@ class timing_guard {
 public:
 #ifdef WEBCPP_SECURE_TIMING_ENTERED
     /**
-     * Where `engaged`, runs the seam, then sets DIT where the CPU has it and it is clear: a test's
-     * build alone.
+     * Where `guard_engaged`, runs the seam, then sets DIT where the CPU has it and it is clear: a
+     * test's build alone.
      *
-     * @param engaged Whether the call computes on a secret; false makes the guard do nothing, the
-     * seam included.
-     * @param where Where the guard is declared, the default: the seam's argument alone.
+     * @param guard_engaged Whether the call computes on a secret; false makes the guard do nothing,
+     * the seam included.
+     * @param entry_location Where the guard is declared, the default: the seam's argument alone.
      */
-    explicit timing_guard(bool engaged = true,
-                          std::source_location where = std::source_location::current()) noexcept {
-        if (!engaged) {
+    explicit timing_guard(bool guard_engaged = true, std::source_location entry_location =
+                                                         std::source_location::current()) noexcept {
+        if (!guard_engaged) {
             return;
         }
-        WEBCPP_SECURE_TIMING_ENTERED(where);
+        WEBCPP_SECURE_TIMING_ENTERED(entry_location);
         enter();
     }
 #else
     /**
-     * Where `engaged`, sets DIT where the CPU has it and it is clear.
+     * Where `guard_engaged`, sets DIT where the CPU has it and it is clear.
      *
-     * @param engaged Whether the call computes on a secret; false makes the guard do nothing.
+     * @param guard_engaged Whether the call computes on a secret; false makes the guard do nothing.
      */
-    explicit timing_guard(bool engaged = true) noexcept {
-        if (engaged) {
+    explicit timing_guard(bool guard_engaged = true) noexcept {
+        if (guard_engaged) {
             enter();
         }
     }

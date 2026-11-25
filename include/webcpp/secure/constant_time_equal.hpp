@@ -44,8 +44,8 @@ template <class T>
 concept byte_sequence =
     (std::ranges::contiguous_range<T const&> && std::ranges::sized_range<T const&> &&
      byte_element<std::ranges::range_value_t<T const&>>) ||
-    requires(T const& value) {
-        { value.bytes() } -> std::convertible_to<std::span<std::uint8_t const>>;
+    requires(T const& sequence_value) {
+        { sequence_value.bytes() } -> std::convertible_to<std::span<std::uint8_t const>>;
     };
 
 /**
@@ -66,36 +66,36 @@ struct byte_view {
 
  The caller binds the result with `auto&&`, which extends the life of a result returned by value.
 
- @param sequence The sequence.
+ @param byte_source The sequence.
  @return Its `bytes()` result, else a reference to it.
 */
 template <byte_sequence Sequence>
-[[nodiscard]] constexpr decltype(auto) held_bytes(Sequence const& sequence) noexcept {
+[[nodiscard]] constexpr decltype(auto) held_bytes(Sequence const& byte_source) noexcept {
     if constexpr (requires {
-                      { sequence.bytes() } -> std::convertible_to<std::span<std::uint8_t const>>;
+                      { byte_source.bytes() } -> std::convertible_to<std::span<std::uint8_t const>>;
                   }) {
-        return sequence.bytes();
+        return byte_source.bytes();
     } else {
-        return std::as_const(sequence);
+        return std::as_const(byte_source);
     }
 }
 
 /**
  Views what `held_bytes` returned: the address and size of its bytes.
 
- @param held The held result, which must outlive the view.
+ @param held_source The held result, which must outlive the view.
  @return Its bytes' address and size; nothing is read.
 */
 template <class Held>
-[[nodiscard]] constexpr auto view_bytes(Held const& held) noexcept {
+[[nodiscard]] constexpr auto view_bytes(Held const& held_source) noexcept {
     if constexpr (std::convertible_to<Held const&, std::span<std::uint8_t const>>) {
-        std::span<std::uint8_t const> const bytes = held;
-        return byte_view<std::uint8_t>{.first = bytes.data(), .count = bytes.size()};
+        std::span<std::uint8_t const> const byte_span = held_source;
+        return byte_view<std::uint8_t>{.first = byte_span.data(), .count = byte_span.size()};
     } else {
         using element = std::remove_cv_t<std::ranges::range_value_t<Held const&>>;
         return byte_view<element>{
-            .first = std::ranges::data(held),
-            .count = std::ranges::size(held),
+            .first = std::ranges::data(held_source),
+            .count = std::ranges::size(held_source),
         };
     }
 }
@@ -126,15 +126,15 @@ template <class First, class Second>
     timing_guard const timing_scope;
     auto&& first_held = detail::held_bytes(first_operand);
     auto&& second_held = detail::held_bytes(second_operand);
-    auto const first = detail::view_bytes(first_held);
-    auto const second = detail::view_bytes(second_held);
-    if (first.count != second.count) {
+    auto const first_view = detail::view_bytes(first_held);
+    auto const second_view = detail::view_bytes(second_held);
+    if (first_view.count != second_view.count) {
         return false;
     }
     unsigned volatile accumulated_difference = 0;
-    for (std::size_t byte_index = 0; byte_index < first.count; ++byte_index) {
-        auto const first_byte = static_cast<std::uint8_t>(first.first[byte_index]);
-        auto const second_byte = static_cast<std::uint8_t>(second.first[byte_index]);
+    for (std::size_t byte_index = 0; byte_index < first_view.count; ++byte_index) {
+        auto const first_byte = static_cast<std::uint8_t>(first_view.first[byte_index]);
+        auto const second_byte = static_cast<std::uint8_t>(second_view.first[byte_index]);
         accumulated_difference =
             accumulated_difference | static_cast<unsigned>(first_byte ^ second_byte);
     }
