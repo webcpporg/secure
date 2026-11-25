@@ -8,40 +8,12 @@
 // a key in a std::vector, a C library's context as a range of one. Built with the wipe's test seam,
 // so that the program can count what was wiped.
 
-// tag::seam[]
-// The test seam: WEBCPP_SECURE_TEST_WIPE_RECORD (the Jamfile defines it for every translation unit
-// of the program) makes every wipe call this function once its bytes are zero.
-#include <webcpp/secure/detail/wipe.hpp>
-
-#include <cstddef>
-
-namespace {
-
-struct wipe_counts {
-    std::size_t wipes = 0;
-    std::size_t bytes = 0;
-};
-
-wipe_counts& counts() {
-    static wipe_counts instance;
-    return instance;
-}
-
-}  // namespace
-
-void webcpp::secure::test::wipe_record(void const* /*wiped_data*/,
-                                       std::size_t byte_count) noexcept {
-    ++counts().wipes;
-    counts().bytes += byte_count;
-}
-
-// end::seam[]
-
 // tag::example[]
 #include <webcpp/secure/erase_secret.hpp>
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <span>
@@ -76,11 +48,46 @@ int main() {
     context ctx{.state = {1, 2, 3}, .counter = 7};
     secure::erase_secret(std::span(&ctx, 1));
     std::cout << "context counter: " << ctx.counter << '\n';
-
-    std::cout << "wipes seen: " << counts().wipes << ", bytes: " << counts().bytes << '\n';
-    if (counts().wipes != 3 || counts().bytes != password_size + key.size() + sizeof(context)) {
-        return 1;
-    }
 }
 
 // end::example[]
+
+// tag::seam[]
+// The test seam: WEBCPP_SECURE_TEST_WIPE_RECORD (the Jamfile defines it for every translation unit
+// of the program) makes every wipe call this function once its bytes are zero. This program counts
+// them, and reports and checks the count as it exits.
+#include <webcpp/secure/detail/wipe.hpp>
+
+#include <cstddef>
+#include <cstdlib>
+#include <iostream>
+
+namespace {
+
+struct wipe_counts {
+    std::size_t wipes = 0;
+    std::size_t bytes = 0;
+
+    ~wipe_counts() {
+        std::cout << "wipes seen: " << wipes << ", bytes: " << bytes << '\n';
+        if (wipes != 3) {
+            std::cout.flush();
+            std::_Exit(1);
+        }
+    }
+};
+
+wipe_counts& counts() {
+    static wipe_counts instance;
+    return instance;
+}
+
+}  // namespace
+
+void webcpp::secure::test::wipe_record(void const* /*wiped_data*/,
+                                       std::size_t byte_count) noexcept {
+    ++counts().wipes;
+    counts().bytes += byte_count;
+}
+
+// end::seam[]

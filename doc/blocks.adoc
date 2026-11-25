@@ -72,7 +72,7 @@ A caller with a large public table, whose index is not secret, indexes it
 directly. The byte blocks read every byte of both sequences. The sizes of byte
 sequences are public and must be equal: a debug build asserts it
 (`BOOST_ASSERT`), and with assertions off, unequal sizes give the zero mask or
-write nothing,. An index past the
+write nothing. An index past the
 table's end selects no entry, whatever the index's width: even `SIZE_MAX` and a
 64-bit entry on WebAssembly's 32-bit `std::size_t`.
 
@@ -104,8 +104,10 @@ the source:
 * *dudect*, natively, a statistical test of the running time on two classes of
   input, over `constant_time_equal`, `lookup`, `select_bytes` and `less_mask`,
   with a control of two identical classes that must pass.
-* Each checker runs a planted leak, a `select` written with a branch and a
-  `lookup` that indexes, which it must report: a checker that cannot see a leak
+* Each checker runs planted leaks that it must report: memcheck and
+  MemorySanitizer a `select` written with a branch and a `lookup` that indexes
+  (memcheck also a branch on an undeclassified verdict), dudect a comparison
+  that returns at the first byte that differs. A checker that cannot see a leak
   fails the lane.
 
 *The limits of those checks, as measured.*
@@ -123,15 +125,17 @@ the source:
   `asm` statement when it is a secret marked uninitialised, so no block could
   run on a marked operand with the statement in place; the round trip carries
   the shadow instead. memcheck and dudect check the `asm` statement's machine
-  code, and an MemorySanitizer build is a checker's build, never a program's.
+  code, and a MemorySanitizer build is a checker's build, never a program's.
 * *The guard covers DIT's instructions, not memory access patterns or
   branches* (<<secure-guard-limits>>): a block that was compiled to a branch is
   not saved by DIT.
 * *dudect is statistical.* It can show a leak, with a large `|t|`, and cannot
   prove there is none: a run that stays under its threshold, as the lane's do,
   is the absence of evidence of a leak at that number of measurements.
-* *A checker sees one compiler and one build.* The lane's memcheck runs on clang on
-  Linux and the planted leaks are reported there; another compiler or
+* *A checker sees one compiler and one build.* The lane's memcheck runs on Linux (its Jamfile builds it
+  for any compiler there; the runs for this page used gcc 14, as gcc 15 was not
+  available in the lane's container) and MemorySanitizer on clang on Linux, and
+  the planted leaks are reported there; another compiler or
   optimisation level may turn a mask back into a branch that this lane did not
   build. A program that needs the guarantee for its own build runs the checkers
   on it.

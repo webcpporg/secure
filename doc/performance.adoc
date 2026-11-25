@@ -27,12 +27,11 @@ guard, in nanoseconds per call; a figure that rounds to zero or below, the loop'
 noise, shows as 0.0.
 The guard sets DIT on this machine. The machine's 1, 5 and 15 minute load averages were 4.46/4.28/5.59
 before and 4.46/4.28/5.59 after, on 18 cores: the figures
-are for an idle machine, one whose 1 minute load average is below 2.
+are to be taken on an idle machine, one whose 1 minute load average is below 2.
 
-NOTE: the machine was not idle by that rule while this was measured: the load came
-from system tasks of the machine's own, with no build or test of webcpp running.
-The guard's work is one core's, and a core was free; read the figures as an upper
-bound.
+NOTE: the 1 minute load average was 4.46 before and 4.46
+after, and that rule asks for below 2 at both: read the figures
+as an upper bound of an idle machine's.
 
 [cols="2,4,1,1,1",options="header"]
 |===

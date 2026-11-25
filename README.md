@@ -6,9 +6,9 @@ secure holds the side-channel and secret-in-memory primitives that the libraries
 algorithm: the DIT timing guard, `erase_secret`, `secret<N>`, `constant_time_equal`, the
 `declassify` marker and the constant-time building blocks, every name in `webcpp::secure`.
 
-Every function is `noexcept` and none allocates; the library is header-only. Its page, `doc/secure.adoc`,
-teaches each primitive with a program of `example/` and states what each covers and what it does
-not; its design is the genesis of `libraries/secure` in
+Every function is `noexcept` and none allocates; the library is header-only. Its page,
+`doc/secure.adoc`, teaches each primitive with a program of `example/` and states what each covers
+and what it does not; its design is the genesis of `libraries/secure` in
 [webcpporg/proposals](https://github.com/webcpporg/proposals).
 
 ## Build and test
