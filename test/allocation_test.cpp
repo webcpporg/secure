@@ -232,10 +232,11 @@ void check_secret() {
         original.writable()[0] = 0x42;
         secure::secret<32> moved(std::move(original));
         BOOST_TEST_EQ(moved.bytes()[0], 0x42U);
+        // NOLINTNEXTLINE(bugprone-use-after-move): the move wipes its source, which this reads.
         BOOST_TEST_EQ(original.bytes()[0], 0U);
         secure::secret<32> assigned;
         assigned = std::move(moved);
-        secure::secret<32> copy = assigned.clone();
+        secure::secret<32> const copy = assigned.clone();
         BOOST_TEST_EQ(copy.bytes()[0], 0x42U);
         std::span<std::uint8_t const, 32> const viewed = copy;
         BOOST_TEST_EQ(viewed.size(), 32U);

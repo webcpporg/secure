@@ -87,9 +87,10 @@ secure-compile declassify_compile_msan : declassify_compile_test.cpp
   : <define>WEBCPP_SECURE_CT_MSAN <toolset>gcc:<build>no <toolset>msvc:<build>no
   : native ;
 
-# No function of the library allocates: under support/counting.hpp's replacement of
-# every form of operator new (and the C library's allocator where a program can
-# count it), every function of every header leaves the count where it was.
+# No function of the library allocates: under support/counting.hpp's
+# replacement of every form of operator new (and the C library's allocator
+# where a program can count it), every function of every header leaves the
+# count where it was.
 secure-run allocation : allocation_test.cpp ;
 # <webcpp/secure.hpp> alone brings every header, one name of each used.
 secure-run convenience_header : convenience_header_test.cpp ;
