@@ -1,0 +1,137 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#secure-blocks]
+== Constant-time building blocks
+
+A decoder that turns a secret into text, a signature scheme that picks one of
+two values by a secret bit, a table that a secret index selects an entry from:
+each needs a few operations that neither branch on nor index memory by the
+values they receive. `webcpp::secure::constant_time`, in
+`<webcpp/secure/constant_time.hpp>`, holds them, after BoringSSL's
+`constant_time_*`.
+
+A *mask* is all zeros or all ones of its type, never a `bool`, so that callers
+combine masks with `&`, `|` and `~` without making a value the compiler may
+branch on. The word blocks take any unsigned integral type but `bool`
+(`std::uint8_t`, `std::uint16_t`, `std::uint32_t`, `std::uint64_t`, `std::size_t`).
+
+[cols="2,5",options="header"]
+|===
+| Block | What it gives
+
+| `value_barrier(value)`
+| the value, hidden from the optimiser
+
+| `mask_from_bit(bit)`
+| 0 to the zero mask, 1 to the all-ones mask
+
+| `is_zero_mask(value)`, `is_equal_mask(a, b)`, `is_less_mask(a, b)`
+| the all-ones mask when the word is zero, when two words are equal, when `a < b` as unsigned numbers; else the zero mask
+
+| `is_in_range_mask(value, low, high)`
+| the all-ones mask when `+low <= value <= high+`: a character class, a digit's range
+
+| `select(mask, when_set, when_clear)`
+| `mask ? when_set : when_clear`, without a branch
+
+| `lookup(table, index)`
+| `table[index]`, reading every entry in order; a value-initialised element for an index past the table
+
+| `select_bytes(mask, destination, when_set, when_clear)`
+| writes one of two byte sequences into a third by a mask
+
+| `equal_mask(a, b)`, `is_zero_mask(bytes)`, `less_mask(a, b)`
+| the all-ones byte mask when two byte sequences are equal, when a sequence is all zeros, when `a < b` as big-endian numbers
+|===
+
+[source,cpp]
+----
+include::{examples}/hex_digit.cpp[tag=example,indent=0]
+----
+
+[listing]
+----
+include::{examples}/hex_digit.expected[]
+----
+
+The example is libsodium's method for `sodium_bin2hex` and `sodium_hex2bin`: a
+nibble to its character and back, with the masks of `is_in_range_mask` and
+`select` where a plain program would write `if (c >= 'a')`. Every mask in it
+passes through `value_barrier`.
+
+[#secure-blocks-cost]
+=== What each block costs
+
+`lookup` reads every entry of the table, so its cost is the table's size, once
+per lookup: a codec's alphabet is at most 64 entries, which is what it is for.
+A caller with a large public table, whose index is not secret, indexes it
+directly. The byte blocks read every byte of both sequences. The sizes of byte
+sequences are public and must be equal: a debug build asserts it
+(`BOOST_ASSERT`), and with assertions off, unequal sizes give the zero mask or
+write nothing,. An index past the
+table's end selects no entry, whatever the index's width: even `SIZE_MAX` and a
+64-bit entry on WebAssembly's 32-bit `std::size_t`.
+
+[#secure-blocks-limits]
+=== What the blocks cover, and what the compiler may still do
+
+*What `value_barrier` is.* It returns its argument, hidden from the optimiser,
+so that it cannot reason about which values a mask may take and turn the
+arithmetic that uses it back into a branch. On GCC and clang it is an empty
+`asm volatile` statement with the value in a register; the `volatile` keeps the
+compiler from merging, hoisting or dropping the statement. On MSVC and on
+WebAssembly, which have no such statement, it is a round trip through a
+`volatile` local. In a constant expression it is the identity. It holds the
+value in this one place: it does not stop the compiler from transforming the
+code around it.
+
+*What the source can do, and what it cannot.* The blocks are written without
+branches or indexed loads, with every mask through the barrier. A compiler may
+still, in principle, rewrite arithmetic into a branch (if-conversion run
+backwards), or a table's loads into an indexed one: the {cpp} standard promises
+nothing about time. That is why the constant-time lane checks the machine code
+of every block, at the speed and the space optimisation, rather than trusting
+the source:
+
+* *memcheck* (Valgrind, with the operands marked uninitialised) reports a
+  branch or an index that depends on a marked value, in every block, in
+  `constant_time_equal` and in the moves of `secret<N>`.
+* *MemorySanitizer* does the same on clang, over every block.
+* *dudect*, natively, a statistical test of the running time on two classes of
+  input, over `constant_time_equal`, `lookup`, `select_bytes` and `less_mask`,
+  with a control of two identical classes that must pass.
+* Each checker runs a planted leak, a `select` written with a branch and a
+  `lookup` that indexes, which it must report: a checker that cannot see a leak
+  fails the lane.
+
+*The limits of those checks, as measured.*
+
+* *MemorySanitizer does not report a branch on an undeclassified verdict.*
+  MemorySanitizer drops a subtraction's carry, so the `(difference - 1) >> 8`
+  at the end of `constant_time_equal` comes out initialised, and a branch on
+  the verdict that was not declassified is not reported. memcheck reports it:
+  the lane's planted `ctgrind_planted_verdict`, a branch on
+  the result of `constant_time_equal` with no `declassify`, is reported with its
+  own function as the first frame. A verdict's branch is therefore checked by
+  memcheck, not by MemorySanitizer.
+* *Under MemorySanitizer `value_barrier` is the volatile round trip, not the
+  `asm` statement.* clang's MemorySanitizer reports the register input of an
+  `asm` statement when it is a secret marked uninitialised, so no block could
+  run on a marked operand with the statement in place; the round trip carries
+  the shadow instead. memcheck and dudect check the `asm` statement's machine
+  code, and an MemorySanitizer build is a checker's build, never a program's.
+* *The guard covers DIT's instructions, not memory access patterns or
+  branches* (<<secure-guard-limits>>): a block that was compiled to a branch is
+  not saved by DIT.
+* *dudect is statistical.* It can show a leak, with a large `|t|`, and cannot
+  prove there is none: a run that stays under its threshold, as the lane's do,
+  is the absence of evidence of a leak at that number of measurements.
+* *A checker sees one compiler and one build.* The lane's memcheck runs on clang on
+  Linux and the planted leaks are reported there; another compiler or
+  optimisation level may turn a mask back into a branch that this lane did not
+  build. A program that needs the guarantee for its own build runs the checkers
+  on it.

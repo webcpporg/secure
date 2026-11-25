@@ -1,0 +1,4 @@
+password: 28 bytes zeroed, size kept yes
+key all zero: yes
+context counter: 0
+wipes seen: 3, bytes: 80

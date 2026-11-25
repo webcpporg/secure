@@ -12,6 +12,7 @@
 // tells its own guards from another library's. Without the seam the constructor takes no
 // location: timing_guard_test checks that.
 
+// tag::seam[]
 #include <cstddef>
 #include <source_location>
 
@@ -28,6 +29,7 @@ void timing_entered(std::source_location const& where) noexcept;
 #define WEBCPP_SECURE_TIMING_ENTERED(where) (::webcpp::secure::test::timing_entered(where))
 
 #include <webcpp/secure/timing_guard.hpp>
+// end::seam[]
 #include <webcpp/test/exit_status.hpp>
 #include "support/timing_dit.hpp"
 

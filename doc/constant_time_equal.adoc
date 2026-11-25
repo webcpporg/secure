@@ -1,0 +1,58 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#secure-constant-time-equal]
+== Comparing tags in constant time
+
+A *timing attack* recovers a secret by measuring how long a program takes to
+handle different inputs
+(link:https://en.wikipedia.org/wiki/Timing_attack[Wikipedia]). The commonest
+target is a comparison: `==` and `memcmp` stop at the first byte that differs,
+so they take longer the more leading bytes match. A server that checks a
+request's MAC that way tells an attacker, through its response time, how many
+bytes of a forged MAC are right; with enough requests the attacker builds a
+valid one byte by byte
+(link:https://cwe.mitre.org/data/definitions/208.html[CWE-208]).
+
+`constant_time_equal`, in `<webcpp/secure/constant_time_equal.hpp>`, compares in
+a time that depends only on the length. It reads every byte, combines the
+differences without a branch, and reduces them to one bit without a branch,
+as BearSSL's tag check does. It is one function over byte ranges and names no
+type of a hash library: a digest, a `std::array`, a `std::span`, a `std::vector`,
+a `std::string_view` and a `secret<N>` are byte sequences by their shape, so
+that tags of different containers compare with each other.
+
+[source,cpp]
+----
+include::{examples}/compare.cpp[tag=example,indent=0]
+----
+
+[listing]
+----
+include::{examples}/compare.expected[]
+----
+
+* *Sizes are public.* Sequences of different sizes compare unequal without
+reading any of their bytes, so that a call with a truncated tag does not read
+past what it was given.
+* *Bytes are bytes.* A `char` counts as the byte it holds, whatever its sign: a
+`std::string_view` of bytes 0x80 to 0xFF compares as unsigned bytes.
+* *A temporary works.* A temporary `secret<N>` is bound for the call and viewed
+through `bytes()` for the call, so `constant_time_equal(mac, derive_key())` is
+safe when `derive_key()` returns a `secret<32>`.
+* *The guard.* On 64-bit ARM the comparison runs inside a `timing_guard`, so DIT
+is set where the CPU has it and the thread's state is as it was after
+(<<secure-guard>>).
+
+*Pitfalls.*
+
+* Comparing the hex strings of two MACs with `==` brings the leak back.
+* Returning early when the lengths differ is fine, since a length is public;
+reading the contents first is not.
+* A MAC checked after the request has been acted on protects nothing: check
+first.
+* The verdict is public by design: a program branches on it. That branch is the
+one `declassify` marks for the checkers (<<secure-declassify>>).

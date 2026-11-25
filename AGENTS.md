@@ -28,3 +28,20 @@ specific to secure.
 - A test that defines a seam includes the seam's header first, before any header of secure.
 - `detail` is not API: another library's header never includes it. Test code may call
   `secure::detail::write_dit`.
+
+## The guard's measured cost
+
+`doc/performance.adoc` is generated: never edit it. `bench/collect.py` writes it, and
+`doc/measurements.json` beside it, from `bench/timing.cpp` built at `variant=release`
+(`b2 libs/secure/bench//timing`, explicit); it refuses a program built at another variant. Measure
+only on an idle machine, release builds only: check `uptime` and the heavy queue first, then, from
+the superproject's root:
+
+```
+python3 libs/secure/bench/collect.py --timing <the built timing> \
+    --data libs/secure/doc/measurements.json --page libs/secure/doc/performance.adoc
+```
+
+The page states the load averages the run saw. `--render-only` rewrites the page from the data.
+`tools/test/secure_collect_test.py` tests the script, and `bench//timing_check` is the correctness
+test of the measured program, run in every lane.

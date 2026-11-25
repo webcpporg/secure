@@ -1,0 +1,5 @@
+set inside the guard: as the CPU allows
+set inside a nested guard: same
+still set after the inner guard: yes
+restored after the outer guard: yes
+disengaged guard sets nothing: yes

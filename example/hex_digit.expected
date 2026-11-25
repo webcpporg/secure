@@ -1,0 +1,4 @@
+encoded: 0123456789abcdef
+round trip of all 16: yes
+'C': value 12, valid yes
+'g': valid no

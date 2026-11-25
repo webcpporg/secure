@@ -52,19 +52,29 @@ template <mask_word U>
     return static_cast<U>(value >> shift);
 }
 
+#ifdef __has_feature
+#if __has_feature(memory_sanitizer)
 /**
  Whether the program is built with clang's MemorySanitizer, which takes an `asm` statement's
  register input for a use and reports it when it is uninitialised: `value_barrier` then makes its
  round trip through a `volatile` local instead, which carries the value's shadow to its result, so
  that MemorySanitizer reports a branch or an index on a secret mask, not the barrier.
 */
-#ifdef __has_feature
-#if __has_feature(memory_sanitizer)
 inline constexpr bool memory_sanitizer = true;
 #else
+/**
+ Whether the program is built with clang's MemorySanitizer, which takes an `asm` statement's
+ register input for a use and reports it when it is uninitialised: `value_barrier` then makes its
+ round trip through a `volatile` local instead, which carries the value's shadow to its result, so
+ that MemorySanitizer reports a branch or an index on a secret mask, not the barrier.
+*/
 inline constexpr bool memory_sanitizer = false;
 #endif
 #else
+/**
+ Whether the program is built with clang's MemorySanitizer: not, on a compiler without
+ `__has_feature`.
+*/
 inline constexpr bool memory_sanitizer = false;
 #endif
 
@@ -286,7 +296,9 @@ constexpr void select_bytes(std::uint8_t mask, std::span<std::uint8_t> destinati
 
 /**
  * The all-ones byte mask when every byte of a sequence is zero, else the zero mask; every byte
- * is read. An empty sequence is all zeros.
+ * is read.
+ *
+ * An empty sequence is all zeros.
  *
  * @param bytes The sequence.
  * @return The mask.

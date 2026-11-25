@@ -9,3 +9,12 @@ project : requirements <library>/webcpp/secure//secure ;
 import webcpp ;
 
 webcpp.targets native wasip2 wasip3 emscripten ;
+
+# The guide's programs: each section's example, built and run on every target,
+# its output compared with the .expected beside it.
+webcpp.example guard.cpp ;
+# Built with the wipe's test seam, which the program defines to count wipes.
+webcpp.example erase.cpp : <define>WEBCPP_SECURE_TEST_WIPE_RECORD ;
+webcpp.example secret.cpp ;
+webcpp.example compare.cpp ;
+webcpp.example hex_digit.cpp ;

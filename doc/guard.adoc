@@ -1,0 +1,150 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#secure-guard]
+== The timing guard
+
+64-bit ARM's DIT bit (Data Independent Timing, `PSTATE.DIT`) makes the
+instructions that Arm lists take a time independent of their operands: with it
+set, a multiplication or an addition of secret numbers does not run faster for
+some values than for others. Apple requires it of constant-time code on Apple
+silicon
+(link:https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Enable-DIT-for-constant-time-cryptographic-operations[Apple, enable DIT for constant-time cryptographic operations]),
+and none of the C libraries webcpp calls sets it.
+
+`timing_guard`, in `<webcpp/secure/timing_guard.hpp>`, is the one guard of
+webcpp's libraries. It sets DIT for its scope where the CPU has it, and
+restores the thread's state when the scope ends. Every function of crypto, hash
+and the codecs that computes on a secret holds one as its first statement, and
+none keeps a copy; a program may hold one around its own constant-time code.
+
+[source,cpp]
+----
+include::{examples}/guard.cpp[tag=example,indent=0]
+----
+
+[listing]
+----
+include::{examples}/guard.expected[]
+----
+
+[#secure-guard-coverage]
+=== Where the guard acts
+
+The guard acts where the compiler is told how to read and write the register,
+and the system says whether the CPU has it. Everywhere else it is an empty
+class that executes no instruction, and `cpu_has_dit()` and `dit_is_set()`
+return `false`. `WEBCPP_SECURE_TIMING_COVERED` is defined exactly where the
+guard acts.
+
+[cols="3,1,4,4",options="header"]
+|===
+| Target | Covered | FEAT_DIT is detected by | The register is reached by
+
+| 64-bit ARM, Apple's systems (macOS, iOS)
+| yes
+| `sysctlbyname("hw.optional.arm.FEAT_DIT")`, once
+| `mrs` and `msr s3_3_c4_c2_5`, then `isb`
+
+| 64-bit ARM, Linux and Android
+| yes
+| `getauxval(AT_HWCAP)` and `HWCAP_DIT` (bit 24), once
+| the same
+
+| 64-bit ARM, Windows, MSVC and clang-cl (not ARM64EC)
+| yes
+| one read of the register under structured exception handling, once (below)
+| `_ReadStatusReg` and `_WriteStatusReg` of `ARM64_SYSREG(3, 3, 4, 2, 5)`, `__isb`
+
+| x86, x86-64, ARM64EC, WebAssembly, anything else
+| no
+| none
+| none: the guard is an empty class
+|===
+
+DIT's instructions trap on a CPU without FEAT_DIT, so nothing reads or writes
+the register unless `cpu_has_dit()` says the CPU has it. On x86 the counterpart,
+DOITM, is a register only the kernel writes; on WebAssembly the engine decides.
+
+*Windows on ARM64.* Windows documents no processor feature flag for DIT and no
+user-mode read of `ID_AA64PFR0_EL1`. The guard reads the DIT register once per
+process inside `__try` and `__except`: on a CPU without FEAT_DIT the read
+raises `STATUS_ILLEGAL_INSTRUCTION`, which the filter takes as "absent", and
+any other exception continues its search. It needs `<excpt.h>` and
+`<intrin.h>`, not `<windows.h>`, and works with {cpp} exceptions on or off. That
+read is the only DIT instruction executed where FEAT_DIT may be absent.
+The guard's lane runs on a Windows 11 ARM64 virtual machine, whose CPU has
+FEAT_DIT, with MSVC 14.3 and 14.5, in debug and release builds: the guard is set
+and stays set across sleeps. *The path where FEAT_DIT is absent is not tested*:
+no machine without FEAT_DIT that runs Windows on ARM64 was available. The filter
+is small and was reviewed, and it fails closed, as no DIT and an empty guard's
+effect, but no program has run it.
+
+[#secure-guard-nesting]
+=== Nesting, and a guard that is not engaged
+
+A guard that finds DIT already set does nothing and leaves it set. The program
+set it itself (as Apple's `timingsafe_enable_if_supported` does), or an outer
+guard did, of the same library or of another: a keyed call of hash inside a
+guarded call of crypto, each holding its own, nests in either order, and a
+thread whose program asked for DIT keeps it after every call. Only the guard
+that set DIT clears it, in its destructor, so the thread's state after the
+scope is the state before it, whatever happened inside, an error and an
+exception included. DIT is a thread's own state: a guard never changes
+another thread's.
+
+Some functions are keyed only by their arguments: a BLAKE2b digest of a call
+that passes a key computes on a secret, and the same call without a key
+computes on public data and must not pay for DIT. Such a function constructs
+the guard with `engaged` false when the call is not keyed,
+`secure::timing_guard const guard\{key_given};`, as the last block of the example
+does with `false`.
+
+A disengaged guard sets nothing, clears nothing and runs no seam, on every
+target. An engaged one, on a target the guard covers and a CPU that has FEAT_DIT,
+costs a few nanoseconds (<<secure-performance>>).
+
+The guard is neither copyable nor movable: the state it restores is the
+scope's.
+
+[#secure-guard-seam]
+=== The seam, for a test
+
+A test that checks that a function holds its guard cannot read DIT where DIT
+does not apply, so the guard has a seam. A test defines
+`WEBCPP_SECURE_TIMING_ENTERED(where)` before its first include of a webcpp
+header; the guard's constructor then takes the `std::source_location` of the
+guard's declaration, whose `function_name()` is the function that holds it and
+whose `file_name()` says which library declares it, and runs the seam with it
+first, on every target, when the guard is engaged:
+
+[source,cpp]
+----
+include::{library-root}/test/timing_guard_seam_test.cpp[tag=seam,indent=0]
+----
+
+The macro changes the constructor's signature, so every translation unit of one
+program defines it alike (the One Definition Rule). A program's own build
+defines nothing: its constructor takes no location, and no function's name or
+header's path reaches the program.
+
+[#secure-guard-limits]
+=== What the guard does not cover
+
+* *Only DIT's instructions.* DIT makes the instructions Arm lists take a
+constant time. It does not make memory accesses independent of their addresses
+(a table indexed by a secret is still a cache-timing channel, and
+`constant_time::lookup` exists for that), and it does not make a branch on a
+secret safe. Code that branches on a secret leaks through the branch whatever
+DIT says.
+* *Not arithmetic on registers alone.* The writes of the register carry a
+`memory` clobber, which orders them against memory accesses and calls (the
+backends' out-of-line C calls, a volatile accumulator), not against arithmetic
+on registers, which the compiler may move across them: the same limit as every
+program that sets DIT.
+* *Not where it is not covered*, per the table, and not on a CPU without
+FEAT_DIT, where it does nothing.
+* *Not tested where FEAT_DIT is absent on Windows*, as said above.

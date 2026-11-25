@@ -6,7 +6,7 @@
 
 = secure: side-channel and secret-in-memory primitives for {cpp}
 :toc: left
-:toclevels: 1
+:toclevels: 2
 :idprefix:
 :sectanchors:
 :example-caption!:
@@ -16,16 +16,33 @@ secure holds the side-channel and secret-in-memory primitives that the
 libraries of https://github.com/webcpporg/webcpp[webcpp] share, for a
 {cpp}20 program on every target webcpp has. It is not a cryptographic library:
 it holds no algorithm, only what an algorithm's implementation needs so that
-its timing and its secrets in memory do not leak.
+its timing and its secrets in memory do not leak, and what a program needs
+around an algorithm to do the same.
 
-The <<reference,reference>> that closes this page lists every name the headers
-declare.
+The page teaches one primitive in each chapter, opening with what it guards
+against, showing a program of `example/` that the build compiles and runs on
+every target with the output it prints, and ending with what the primitive does
+not do: <<secure-guard>> (the DIT guard), <<secure-erase-secret>>,
+<<secure-secret>>, <<secure-constant-time-equal>>, <<secure-declassify>> and
+<<secure-blocks>> (masks, selection and table lookup). <<secure-performance>>
+is what the guard costs, measured. The <<reference,reference>> that closes the
+page lists every name the headers declare.
 
-== Exceptions
+include::overview.adoc[]
 
-secure raises no exception: every function is `noexcept`. It builds the same
-with exceptions on and off, and `WEBCPP_SECURE_NO_EXCEPTIONS` is defined when
-webcpp has none, or when a program defines it alone.
+include::guard.adoc[]
+
+include::erase_secret.adoc[]
+
+include::secret.adoc[]
+
+include::constant_time_equal.adoc[]
+
+include::declassify.adoc[]
+
+include::blocks.adoc[]
+
+include::performance.adoc[]
 
 [#reference]
 == Reference
