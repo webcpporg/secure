@@ -58,9 +58,9 @@ int main() {
 // them, and reports and checks the count as it exits.
 #include <webcpp/secure/detail/wipe.hpp>
 
-#include <cstddef>
+#include <cstddef>  // NOLINT(readability-duplicate-include): each listing stands alone.
 #include <cstdlib>
-#include <iostream>
+#include <iostream>  // NOLINT(readability-duplicate-include): each listing stands alone.
 
 namespace {
 
