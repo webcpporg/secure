@@ -26,6 +26,7 @@
 // it and writes doc/measurements.json and doc/performance.adoc.
 
 #include <webcpp/secure/timing_guard.hpp>
+#include <webcpp/test/exit_status.hpp>
 
 #include <algorithm>
 #include <array>
@@ -216,10 +217,8 @@ int usage() {
     return 2;
 }
 
-}  // namespace
-
-int main(int argument_count, char** arguments) {
-    std::span<char*> const given(arguments, static_cast<std::size_t>(argument_count));
+// The program, given its arguments; main hands its status to webcpp's test support.
+int run(std::span<char*> const given) {
     bool const measuring = given.size() == 2 && std::string_view(given[1]) == "--measure";
     if (given.size() != 1 && !measuring) {
         return usage();
@@ -244,4 +243,13 @@ int main(int argument_count, char** arguments) {
     std::printf("form %s\nstate restored %s\n", formed ? "ok" : "FAILED",
                 measured.restored ? "ok" : "FAILED");
     return formed && measured.restored ? 0 : 1;
+}
+
+}  // namespace
+
+// Under Emscripten main's return value is dropped (EXIT_RUNTIME=0): the status reaches node through
+// webcpp::test::exit_status, so that timing_check fails there as it does natively.
+int main(int argument_count, char** arguments) {
+    return webcpp::test::exit_status(
+        run(std::span<char*>(arguments, static_cast<std::size_t>(argument_count))));
 }

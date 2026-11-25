@@ -5,9 +5,12 @@
 // https://www.boost.org/LICENSE_1_0.txt)
 
 // <webcpp/secure.hpp>, included alone, brings every public header of the library: this program
-// names one function or type of each of them and nothing else is included.
+// names one function or type of each of them and includes no other header of the library.
 
 #include <webcpp/secure.hpp>
+#include <webcpp/test/exit_status.hpp>
+
+#include <boost/core/lightweight_test.hpp>
 
 #include <array>
 #include <cstddef>
@@ -24,7 +27,6 @@
 
 int main() {
     namespace secure = webcpp::secure;
-    int failures = 0;
 
     // timing_guard.hpp
     {
@@ -36,24 +38,24 @@ int main() {
     // erase_secret.hpp, with detail/wipe.hpp
     std::array<std::uint8_t, 4> buffer{1, 2, 3, 4};
     secure::erase_secret(buffer);
-    failures += buffer[0] != 0 ? 1 : 0;
+    BOOST_TEST_EQ(buffer[0], 0);
 
     // constant_time_equal.hpp
     std::array<std::uint8_t, 4> const zeros{};
-    failures += secure::constant_time_equal(buffer, zeros) ? 0 : 1;
+    BOOST_TEST(secure::constant_time_equal(buffer, zeros));
 
     // secret.hpp
     secure::secret<4> const held;
-    failures += secure::secret<4>::size() == 4 ? 0 : 1;
+    BOOST_TEST_EQ(secure::secret<4>::size(), 4U);
 
     // constant_time.hpp
-    failures += secure::constant_time::is_zero_mask<std::uint8_t>(0) == 0xff ? 0 : 1;
+    BOOST_TEST_EQ(secure::constant_time::is_zero_mask<std::uint8_t>(0), 0xff);
 
     // declassify.hpp
     std::uint8_t verdict = 1;
     secure::declassify(verdict);
-    failures += verdict == 1 ? 0 : 1;
+    BOOST_TEST_EQ(verdict, 1);
 
     static_cast<void>(held);
-    return failures;
+    return webcpp::test::exit_status(boost::report_errors());
 }

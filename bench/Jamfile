@@ -25,5 +25,5 @@ webcpp.run timing_check_no_exceptions : timing.cpp : <exception-handling>off ;
 
 # The same program at variant=release, the one collect.py --timing measures,
 # natively and by hand (doc/performance.adoc); no lane measures it.
-exe timing : timing.cpp : <variant>release ;
+exe timing : timing.cpp : <variant>release <library>/webcpp//node-test ;
 explicit timing ;
