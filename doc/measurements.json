@@ -1,0 +1,37 @@
+{
+  "measurement": "the nanoseconds secure::timing_guard adds to a call, bench/timing.cpp",
+  "date": "2026-11-25",
+  "machine": {
+    "cpu": "Apple M5 Max",
+    "architecture": "arm64",
+    "cores": 18,
+    "os": "Darwin 27.0.0"
+  },
+  "load_average_before_after": [
+    [
+      4.45654296875,
+      4.275390625,
+      5.5927734375
+    ],
+    [
+      4.45654296875,
+      4.275390625,
+      5.5927734375
+    ]
+  ],
+  "build": "variant=release",
+  "target": "native",
+  "compiler": "Apple LLVM 21.0.0 (clang-2100.4.1.1)",
+  "iterations": 10000000,
+  "runs": 5,
+  "dit": true,
+  "clear_ns": 39.628,
+  "clear_fastest_ns": 39.468,
+  "clear_slowest_ns": 40.819,
+  "set_ns": 0.468,
+  "set_fastest_ns": 0.244,
+  "set_slowest_ns": 0.697,
+  "disengaged_ns": -0.0,
+  "disengaged_fastest_ns": -0.0,
+  "disengaged_slowest_ns": 0.0
+}

@@ -45,6 +45,8 @@ from pathlib import Path
 
 # What the page is built from, and only from: bench/Jamfile's timing, at variant=release.
 BUILD = "variant=release"
+# The 1 minute load average at or above which a measurement says the machine was not idle.
+IDLE_LOAD = 2
 RELEASE_ONLY = "the page is built only from release builds: bench/Jamfile's timing at " + BUILD
 
 
@@ -212,9 +214,17 @@ def render(data, page):
         "noise, shows as 0.0.",
         f"{sets} The machine's 1, 5 and 15 minute load averages were {fmt_load(load[0])}",
         f"before and {fmt_load(load[1])} after, on {machine_info['cores']} cores: the figures",
-        "are for an idle machine, one whose 1 minute load average is below 2.",
+        f"are for an idle machine, one whose 1 minute load average is below {IDLE_LOAD}.",
         "",
     ]
+    if max(load[0][0], load[1][0]) >= IDLE_LOAD:
+        lines += [
+            "NOTE: the machine was not idle by that rule while this was measured: the load came",
+            "from system tasks of the machine's own, with no build or test of webcpp running.",
+            "The guard's work is one core's, and a core was free; read the figures as an upper",
+            "bound.",
+            "",
+        ]
     rows = (
         ("clear", "clear, as a program that sets nothing has it",
          "reads DIT, sets it, and clears it on the way out"),

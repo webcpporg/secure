@@ -105,7 +105,7 @@ does with `false`.
 
 A disengaged guard sets nothing, clears nothing and runs no seam, on every
 target. An engaged one, on a target the guard covers and a CPU that has FEAT_DIT,
-costs a few nanoseconds (<<secure-performance>>).
+costs tens of nanoseconds when it sets and clears DIT, and under a nanosecond when DIT is already set (<<secure-performance>>).
 
 The guard is neither copyable nor movable: the state it restores is the
 scope's.
