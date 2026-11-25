@@ -214,7 +214,8 @@ def render(data, page):
         "noise, shows as 0.0.",
         f"{sets} The machine's 1, 5 and 15 minute load averages were {fmt_load(load[0])}",
         f"before and {fmt_load(load[1])} after, on {machine_info['cores']} cores: the figures",
-        f"are to be taken on an idle machine, one whose 1 minute load average is below {IDLE_LOAD}.",
+        f"are to be taken on an idle machine, one whose 1 minute load average is below "
+        f"{IDLE_LOAD}.",
         "",
     ]
     if max(load[0][0], load[1][0]) >= IDLE_LOAD:
