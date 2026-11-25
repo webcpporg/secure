@@ -52,6 +52,34 @@ template <mask_word U>
     return static_cast<U>(value >> shift);
 }
 
+/**
+ Whether the program is built with clang's MemorySanitizer, which takes an `asm` statement's
+ register input for a use and reports it when it is uninitialised: `value_barrier` then makes its
+ round trip through a `volatile` local instead, which carries the value's shadow to its result, so
+ that MemorySanitizer reports a branch or an index on a secret mask, not the barrier.
+*/
+#ifdef __has_feature
+#if __has_feature(memory_sanitizer)
+inline constexpr bool memory_sanitizer = true;
+#else
+inline constexpr bool memory_sanitizer = false;
+#endif
+#else
+inline constexpr bool memory_sanitizer = false;
+#endif
+
+/**
+ A value's round trip through a `volatile` local, which the compiler must store and load again.
+
+ @param value The value.
+ @return The same value.
+*/
+template <mask_word U>
+[[nodiscard]] U volatile_round_trip(U value) noexcept {
+    U volatile held = value;
+    return held;
+}
+
 }  // namespace detail
 
 namespace constant_time {
@@ -63,7 +91,9 @@ namespace constant_time {
  * On GCC and clang it is an empty `asm volatile` statement with the value in a register
  * (BoringSSL's `value_barrier_w`); the `volatile` keeps the compiler from merging, hoisting or
  * dropping the statement, which has an output and would otherwise be an ordinary expression; on
- * MSVC and on WebAssembly, which have no such statement, a round trip through a `volatile` local.
+ * MSVC and on WebAssembly, which have no such statement, and under MemorySanitizer, which would
+ * report the statement's input when it is a secret marked uninitialised, a round trip through a
+ * `volatile` local.
  * In a constant expression it is the identity. The barrier holds the value in this one place: it
  * does not stop the compiler from transforming the code around it.
  *
@@ -77,11 +107,14 @@ template <detail::mask_word U>
         return value;
     }
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(__wasm__)
-    __asm__ volatile("" : "+r"(value));
-    return value;
+    if constexpr (detail::memory_sanitizer) {
+        return detail::volatile_round_trip(value);
+    } else {
+        __asm__ volatile("" : "+r"(value));
+        return value;
+    }
 #else
-    U volatile held = value;
-    return held;
+    return detail::volatile_round_trip(value);
 #endif
 }
 
