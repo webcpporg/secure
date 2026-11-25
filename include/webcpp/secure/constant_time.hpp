@@ -60,11 +60,12 @@ namespace constant_time {
  * Returns its argument, hidden from the optimiser, so that it cannot reason about which values
  * a mask may take and turn the arithmetic that uses it back into a branch.
  *
- * On GCC and clang it is an empty `asm` statement with the value in a register (BoringSSL's
- * `value_barrier_w`); on MSVC and on WebAssembly, which have no such statement, a round trip
- * through a `volatile` local. In a constant expression it is the identity. The barrier holds
- * the value in this one place: it does not stop the compiler from transforming the code around
- * it.
+ * On GCC and clang it is an empty `asm volatile` statement with the value in a register
+ * (BoringSSL's `value_barrier_w`); the `volatile` keeps the compiler from merging, hoisting or
+ * dropping the statement, which has an output and would otherwise be an ordinary expression; on
+ * MSVC and on WebAssembly, which have no such statement, a round trip through a `volatile` local.
+ * In a constant expression it is the identity. The barrier holds the value in this one place: it
+ * does not stop the compiler from transforming the code around it.
  *
  * @tparam U Any unsigned integral type but `bool`.
  * @param value The value.
@@ -76,7 +77,7 @@ template <detail::mask_word U>
         return value;
     }
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(__wasm__)
-    __asm__("" : "+r"(value));
+    __asm__ volatile("" : "+r"(value));
     return value;
 #else
     U volatile held = value;
