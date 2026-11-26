@@ -28,6 +28,7 @@
 
 #include <array>
 #include <cstddef>
+#include <exception>
 
 namespace {
 
@@ -95,7 +96,7 @@ void cleared_inside_nested_guards() {
 
 #ifndef WEBCPP_SECURE_NO_EXCEPTIONS
 /** The exception the tests throw. */
-struct thrown {};
+struct thrown : std::exception {};
 
 /** Throws `thrown`. */
 void throw_now() {
