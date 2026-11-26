@@ -22,6 +22,7 @@
 #include <cstdio>
 #include <cstring>
 #include <initializer_list>
+#include <iostream>
 #include <optional>
 #include <random>
 #include <string>
@@ -374,16 +375,17 @@ inline std::string case_lines(char const* name, t_statistic const& result, bool 
 }
 
 /**
- * Prints a case's lines (`case_lines`) to stdout, and flushes them.
+ * Prints a case's lines (`case_lines`) to `out`, stdout by default, and flushes them.
  * @param name The case's name, as `--case` takes it.
  * @param result Its statistic.
  * @param judged_case Whether its |t| counts in the program's verdict.
  * @param buffers The buffers it measures: its input, its output and its object.
+ * @param out Where: `std::cout`, the program's stdout, whose other lines (`std::printf`) it keeps
+ * in order, since the standard streams are synchronised with C's; a test's string stream.
  */
 inline void report_case(char const* name, t_statistic const& result, bool judged_case,
-                        std::initializer_list<address> buffers) {
-    static_cast<void>(std::fputs(case_lines(name, result, judged_case, buffers).c_str(), stdout));
-    static_cast<void>(std::fflush(stdout));
+                        std::initializer_list<address> buffers, std::ostream& out = std::cout) {
+    out << case_lines(name, result, judged_case, buffers) << std::flush;
 }
 
 /**

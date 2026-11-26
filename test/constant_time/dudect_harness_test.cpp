@@ -19,9 +19,9 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <optional>
 #include <random>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -176,7 +176,7 @@ void cpuinfo() {
 }
 
 /** The lines' exact text, which the CI's judge parses. */
-void report_case_format([[maybe_unused]] char const* program) {
+void report_case_format() {
     test::class_summary const first{.count = 10, .mean_ns = 100.0};
     test::class_summary const second{.count = 12, .mean_ns = 101.0};
     test::t_statistic const high{
@@ -209,47 +209,21 @@ void report_case_format([[maybe_unused]] char const* program) {
                   "class0_mean_ns=100.00 class1_n=12 class1_mean_ns=101.00\n"
                   "dudect addresses case=x a=0x005 b=0xfff\n");
 
-#ifndef __wasi__
-    // report_case writes the same lines to stdout. Under wasmtime the lane preopens no
-    // directory, so there no file can stand in for stdout: case_lines above is the text. The
-    // file is named after the program, in its build directory, so that no other run shares it.
-    std::string const path = std::string(program) + ".stdout";
-    static_cast<void>(std::fflush(stdout));
-    if (BOOST_TEST(std::freopen(path.c_str(), "w", stdout) != nullptr)) {
-        test::report_case("equal", high, true, {{"a", where}});
-        test::report_case("equal", low, true, {{"a", where}});
-        static_cast<void>(std::fflush(stdout));
-        std::string written;
-        if (std::FILE* const file = std::fopen(path.c_str(), "r")) {
-            std::array<char, 512> buffer{};
-            std::size_t read = 0;
-            while ((read = std::fread(buffer.data(), 1, buffer.size(), file)) > 0) {
-                written.append(buffer.data(), read);
-            }
-            static_cast<void>(std::fclose(file));
-        }
-        // Nothing is printed to stdout after this: the test's report goes to stderr.
-#ifdef _WIN32
-        static_cast<void>(std::freopen("NUL", "w", stdout));
-#else
-        static_cast<void>(std::freopen("/dev/null", "w", stdout));
-#endif
-        static_cast<void>(std::remove(path.c_str()));
-        BOOST_TEST_EQ(written, high_lines + "dudect case=equal t=3.00 threshold=10 judged=yes\n");
-    }
-#endif
+    // report_case writes the same lines to its stream, stdout's std::cout in a program.
+    std::ostringstream written;
+    test::report_case("equal", high, true, {{"a", where}}, written);
+    test::report_case("equal", low, true, {{"a", where}}, written);
+    BOOST_TEST_EQ(written.str(), high_lines + "dudect case=equal t=3.00 threshold=10 judged=yes\n");
 }
 
 }  // namespace
 
-// NOLINTNEXTLINE(misc-const-correctness): main's arguments have the type the standard gives them
-int main(int argc, char** argv) {
+int main() {
     largest_t_whole_set();
     choose_control();
     select_case();
     printed_boundary();
     cpuinfo();
-    // Last: it leaves stdout on the null device.
-    report_case_format(argc > 0 ? argv[0] : "dudect_harness");
+    report_case_format();
     return webcpp::test::exit_status(boost::report_errors());
 }
