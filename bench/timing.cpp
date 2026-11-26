@@ -10,10 +10,10 @@
 //
 // Run as `timing --measure`, it times, in one process, 10^7 iterations each of an empty loop body,
 // of a guard entered from a thread whose DIT is clear (it sets DIT and clears it again), of a
-// guard entered with DIT already set (it reads DIT and leaves it; the program sets DIT for that
-// part with the same `msr` as the guard, and clears it after), and of a disengaged guard (what a
-// call keyed only by its arguments pays when it is made without a key: the flag, read from memory
-// as a member is, and a branch), five runs of each, interleaved, and prints one JSON line:
+// guard entered with DIT already set (it reads DIT, and again at its end; the program sets DIT
+// for that part with the same `msr` as the guard, and clears it after), and of a disengaged guard
+// (what a call keyed only by its arguments pays when it is made without a key: the flag, read from
+// memory as a member is, and a branch), five runs of each, interleaved, and prints one JSON line:
 // `{"dit": true|false, "clear": <ns>, "set": <ns>, "disengaged": <ns>, ...}`, each cost the
 // median of its runs minus the empty loop's median, in nanoseconds per guard, then each part's
 // fastest and slowest run (minus the same median), the iterations, the runs, the target and the

@@ -205,11 +205,16 @@ inline bool probe_dit() noexcept {
  * Sets DIT for its scope where the CPU has it, and leaves the thread's DIT as it found it.
  *
  * Construction, when engaged, finds DIT clear, sets it and remembers to clear it; the destructor
- * clears it then only. A guard that finds DIT set does nothing and leaves it set: the program set
- * it itself (as Apple's `timingsafe_enable_if_supported` does), or an outer guard did, of the same
- * library or of another, so that guards nest in any order of libraries and a thread whose program
- * asked for DIT keeps it after every call. DIT is a thread's own state, so a guard never changes
- * another thread's. The writes' `memory` clobber orders them against memory accesses and calls
+ * clears it then. A guard that finds DIT set leaves it set: the program set it itself (as Apple's
+ * `timingsafe_enable_if_supported` does), or an outer guard did, of the same library or of another,
+ * so that guards nest in any order of libraries and a thread whose program asked for DIT keeps it
+ * after every call. Such a guard reads DIT again at its end and sets it if something inside its
+ * scope cleared it: Windows on ARM64 clears DIT whenever it resumes a thread after a catch (or in
+ * an `__except` block), so that an exception caught inside the scope would otherwise leave it
+ * clear. DIT is a thread's own state, so a guard never changes another thread's. The destructor
+ * runs as well when an exception ends the scope, with DIT as it was in the scope (Windows clears
+ * it only on resuming after the catch, outside the guard). The writes' `memory` clobber orders
+ * them against memory accesses and calls
  * (the backends' out-of-line C calls, a volatile accumulator), not against arithmetic on
  * registers alone, which the compiler may move across them: the same limit as every program that
  * sets DIT.
@@ -246,11 +251,13 @@ public:
     }
 #endif
 
-    /** Clears DIT when this guard set it. */
+    /** Leaves DIT as this guard found it: clears it when the guard set it, else sets it again. */
     ~timing_guard() {
 #ifdef WEBCPP_SECURE_TIMING_COVERED
-        if (armed_) {
+        if (found_ == found_dit::clear) {
             detail::write_dit(0);
+        } else if (found_ == found_dit::set && !dit_is_set()) {
+            detail::write_dit(detail::dit_bit);
         }
 #endif
     }
@@ -268,19 +275,36 @@ public:
     timing_guard& operator=(timing_guard&&) = delete;
 
 private:
-    /** Sets DIT where the CPU has it and it is clear, and remembers to clear it. */
+#ifdef WEBCPP_SECURE_TIMING_COVERED
+    /** What an engaged guard found on a CPU with DIT, and so restores at its end. */
+    enum class found_dit : unsigned char {
+        /** Nothing to restore: the guard is disengaged, or the CPU has no DIT. */
+        nothing,
+        /** DIT was clear: the guard set it, and clears it at its end. */
+        clear,
+        /** DIT was set: the guard sets it again at its end if something cleared it. */
+        set,
+    };
+#endif
+
+    /** Sets DIT where the CPU has it and it is clear, and remembers what it found. */
     void enter() noexcept {
 #ifdef WEBCPP_SECURE_TIMING_COVERED
-        if (cpu_has_dit() && !dit_is_set()) {
+        if (!cpu_has_dit()) {
+            return;
+        }
+        if (dit_is_set()) {
+            found_ = found_dit::set;
+        } else {
             detail::write_dit(detail::dit_bit);
-            armed_ = true;
+            found_ = found_dit::clear;
         }
 #endif
     }
 
 #ifdef WEBCPP_SECURE_TIMING_COVERED
-    /** Whether this guard set DIT, and so clears it. */
-    bool armed_ = false;
+    /** What this guard found, and so restores. */
+    found_dit found_ = found_dit::nothing;
 #endif
 };
 

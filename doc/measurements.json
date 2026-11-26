@@ -1,6 +1,6 @@
 {
   "measurement": "the nanoseconds secure::timing_guard adds to a call, bench/timing.cpp",
-  "date": "2026-11-25",
+  "date": "2026-11-26",
   "machine": {
     "cpu": "Apple M5 Max",
     "architecture": "arm64",
@@ -9,14 +9,14 @@
   },
   "load_average_before_after": [
     [
-      4.45654296875,
-      4.275390625,
-      5.5927734375
+      4.52978515625,
+      9.39892578125,
+      14.50244140625
     ],
     [
-      4.45654296875,
-      4.275390625,
-      5.5927734375
+      4.52978515625,
+      9.39892578125,
+      14.50244140625
     ]
   ],
   "build": "variant=release",
@@ -25,13 +25,13 @@
   "iterations": 10000000,
   "runs": 5,
   "dit": true,
-  "clear_ns": 39.628,
-  "clear_fastest_ns": 39.468,
-  "clear_slowest_ns": 40.819,
-  "set_ns": 0.468,
-  "set_fastest_ns": 0.244,
-  "set_slowest_ns": 0.697,
+  "clear_ns": 39.581,
+  "clear_fastest_ns": 39.521,
+  "clear_slowest_ns": 40.373,
+  "set_ns": 1.302,
+  "set_fastest_ns": 1.279,
+  "set_slowest_ns": 1.35,
   "disengaged_ns": -0.0,
-  "disengaged_fastest_ns": -0.0,
-  "disengaged_slowest_ns": 0.0
+  "disengaged_fastest_ns": -0.001,
+  "disengaged_slowest_ns": 0.008
 }

@@ -45,6 +45,11 @@ secure-run timing_guard_threads : timing_guard_threads_test.cpp
 # the guard set and kept across sleeps (the Windows ARM64 lane, MSVC 14.3 and
 # 14.5); on every other target, the empty guard.
 secure-run timing_guard_windows : timing_guard_windows_test.cpp ;
+# A guard leaves DIT as it found it also when its scope changed DIT (as a catch
+# does on Windows on ARM64, which clears DIT on resuming after any catch) and
+# when an exception ends its scope: nested, in every order, from clear and from
+# set; after a catch outside every guard, DIT is what the system leaves.
+secure-run timing_guard_exceptions : timing_guard_exceptions_test.cpp ;
 # The test support's recorder: what it counts, and which paths are secure's.
 secure-run timing_seam_support : timing_seam_support_test.cpp ;
 

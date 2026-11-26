@@ -71,7 +71,7 @@ DOITM, is a register only the kernel writes; on WebAssembly the engine decides.
 
 *Windows on ARM64.* Windows documents no processor feature flag for DIT and no
 user-mode read of `ID_AA64PFR0_EL1`. The guard reads the DIT register once per
-process inside `__try` and `__except`: on a CPU without FEAT_DIT the read
+process inside `+__try+` and `+__except+`: on a CPU without FEAT_DIT the read
 raises `STATUS_ILLEGAL_INSTRUCTION`, which the filter takes as "absent", and
 any other exception continues its search. It needs `<excpt.h>` and
 `<intrin.h>`, not `<windows.h>`, and works with {cpp} exceptions on or off. That
@@ -91,10 +91,11 @@ set it itself (as Apple's `timingsafe_enable_if_supported` does), or an outer
 guard did, of the same library or of another: a keyed call of hash inside a
 guarded call of crypto, each holding its own, nests in either order, and a
 thread whose program asked for DIT keeps it after every call. Only the guard
-that set DIT clears it, in its destructor, so the thread's state after the
-scope is the state before it, whatever happened inside, an error and an
-exception included. DIT is a thread's own state: a guard never changes
-another thread's.
+that set DIT clears it, in its destructor; a guard that found DIT set reads it
+again in its destructor and sets it if something inside its scope cleared it
+(<<secure-guard-exceptions>>). So the thread's state after the scope is the
+state before it, whatever happened inside, an error and an exception included.
+DIT is a thread's own state: a guard never changes another thread's.
 
 Some functions are keyed only by their arguments: a BLAKE2b digest of a call
 that passes a key computes on a secret, and the same call without a key
@@ -105,10 +106,42 @@ does with `false`.
 
 A disengaged guard sets nothing, clears nothing and runs no seam, on every
 target. An engaged one, on a target the guard covers and a CPU that has FEAT_DIT,
-costs tens of nanoseconds when it sets and clears DIT, and under a nanosecond when DIT is already set (<<secure-performance>>).
+costs tens of nanoseconds when it sets and clears DIT, and about a nanosecond
+when DIT is already set (<<secure-performance>>).
 
 The guard is neither copyable nor movable: the state it restores is the
 scope's.
+
+[#secure-guard-exceptions]
+=== Exceptions
+
+An exception that leaves a guard's scope runs the guard's destructor during the
+unwinding, which leaves DIT as the guard found it, as at the scope's normal end.
+
+*Windows on ARM64 clears DIT after a catch.* The system keeps DIT through the
+search for a handler and the unwinding: a filter, every destructor run during
+the unwinding and the catch block itself see DIT as it was at the throw. Then it
+resumes the thread after the catch block, or in an `+__except+` block, with DIT
+clear, from set as from clear: `RtlRestoreContext`, the unwinder's last step,
+clears DIT whatever bit 24 of the context's `Cpsr` says, and
+`RtlCaptureContext` records NZCV alone. This was observed on the Windows 11 ARM64
+machine of the guard's lane with MSVC 14.3 and 14.5, debug and release; Microsoft
+documents none of it. Two things follow.
+
+* An exception caught inside a guard's scope leaves the rest of that scope with
+DIT clear. A guard that set DIT clears it at its end anyway; one that found it
+set sets it again at its end, so that the thread's state after the guard is the
+state before it. Code that catches an exception inside a guarded scope and then
+computes on a secret holds a guard of its own after the catch, which sets DIT
+again for its scope.
+* After a catch outside every guard, DIT is clear, guard or no guard: no
+destructor can change what the system does once the unwinding is over. A program
+that sets DIT for its own code and catches exceptions sets it again after the
+catch.
+
+On Apple's systems and Linux, DIT after a catch is as it was at the throw.
+`test/timing_guard_exceptions_test.cpp` checks all of this on every target, with
+exceptions on and off.
 
 [#secure-guard-seam]
 === The seam, for a test
