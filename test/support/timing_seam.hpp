@@ -57,6 +57,28 @@ constexpr bool path_separator(char character) noexcept {
 }
 
 /**
+ * Whether `path` holds `name` at `position`, every index checked against the path's size (no
+ * call that may throw, unlike `substr`).
+ *
+ * @param path A `file_name()`.
+ * @param position Where `name` would start.
+ * @param name The characters to find there.
+ * @return Whether the characters of `path` from `position` are those of `name`.
+ */
+constexpr bool path_holds_at(std::string_view path, std::size_t position,
+                             std::string_view name) noexcept {
+    if (position > path.size() || name.size() > path.size() - position) {
+        return false;
+    }
+    for (std::size_t index = 0; index < name.size(); ++index) {
+        if (path[position + index] != name[index]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * Whether a path names a file under a library's include directory: the components `include`,
  * `webcpp` and `library`, in that order, each followed by a separator, `/` or `\` in any mix, and
  * `include` the path's first component or after a separator.
@@ -74,9 +96,9 @@ constexpr bool path_in_library(std::string_view path, std::string_view library) 
         std::size_t const library_at = root_at + root.size() + 1;
         std::size_t const after = library_at + library.size();
         if ((at == 0 || path_separator(path[at - 1])) && after < path.size() &&
-            path_separator(path[root_at - 1]) && path.substr(root_at, root.size()) == root &&
-            path_separator(path[library_at - 1]) &&
-            path.substr(library_at, library.size()) == library && path_separator(path[after])) {
+            path_separator(path[root_at - 1]) && path_holds_at(path, root_at, root) &&
+            path_separator(path[library_at - 1]) && path_holds_at(path, library_at, library) &&
+            path_separator(path[after])) {
             return true;
         }
     }
