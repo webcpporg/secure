@@ -13,8 +13,8 @@
 // secure::timing_guard, as in the guarded functions that call it, which sets DIT where the CPU has
 // it (constant_time_equal holds its own): on 64-bit ARM only DIT makes the instructions' time
 // independent of their data. Without it, lookup's machine code, branch-free and index-free, gave
-// |t| 12 to 17 under MSVC 14.5 on the Windows 11 ARM64 machine (Apple silicon), and 1 to 3 with
-// DIT set, the same instructions otherwise (2026-11-25; secure's blocks page).
+// |t| 11 to 17.5 under MSVC 14.5 on the Windows 11 ARM64 machine (Apple silicon), and under 3
+// with DIT set, the same instructions otherwise (2026-11-25; secure's blocks page).
 
 #include "dudect.hpp"
 

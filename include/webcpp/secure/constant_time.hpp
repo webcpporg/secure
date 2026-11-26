@@ -14,6 +14,12 @@
  do; a compiler may still, in principle, rewrite arithmetic into a branch, which is why the
  constant-time lanes check the machine code under Valgrind's memcheck and MemorySanitizer and
  measure it with dudect.
+
+ On 64-bit ARM, branch-free and index-free code is not enough: Arm promises a time independent of
+ the operands only for the instructions it lists, and only with DIT set. A caller that runs the
+ blocks on a secret holds a `webcpp::secure::timing_guard` around them, as every function of
+ webcpp that computes on a secret does: with DIT clear, MSVC 14.5's `lookup` was measured to take a
+ time that depends on its index on Windows on ARM64.
 */
 #ifndef WEBCPP_SECURE_CONSTANT_TIME_HPP
 #define WEBCPP_SECURE_CONSTANT_TIME_HPP

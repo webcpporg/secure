@@ -86,7 +86,7 @@ effect, but no program has run it.
 [#secure-guard-nesting]
 === Nesting, and a guard that is not engaged
 
-A guard that finds DIT already set does nothing and leaves it set. The program
+A guard that finds DIT already set leaves it set. The program
 set it itself (as Apple's `timingsafe_enable_if_supported` does), or an outer
 guard did, of the same library or of another: a keyed call of hash inside a
 guarded call of crypto, each holding its own, nests in either order, and a
@@ -119,12 +119,12 @@ An exception that leaves a guard's scope runs the guard's destructor during the
 unwinding, which leaves DIT as the guard found it, as at the scope's normal end.
 
 *Windows on ARM64 clears DIT after a catch.* The system keeps DIT through the
-search for a handler and the unwinding: a filter, every destructor run during
-the unwinding and the catch block itself see DIT as it was at the throw. Then it
-resumes the thread after the catch block, or in an `+__except+` block, with DIT
-clear, from set as from clear: `RtlRestoreContext`, the unwinder's last step,
-clears DIT whatever bit 24 of the context's `Cpsr` says, and
-`RtlCaptureContext` records NZCV alone. This was observed on the Windows 11 ARM64
+search for a handler and the unwinding: it does not change DIT then, so a
+filter, each destructor run during the unwinding and the catch block see DIT as
+the code before them left it. Then it resumes the thread after the catch block,
+or in an `+__except+` block, with DIT clear, from set as from clear:
+`RtlRestoreContext`, the unwinder's last step, clears DIT whatever bit 24 of the
+context's `Cpsr` says, and `RtlCaptureContext` records NZCV alone. This was observed on the Windows 11 ARM64
 machine of the guard's lane with MSVC 14.3 and 14.5, debug and release; Microsoft
 documents none of it. Two things follow.
 
@@ -133,13 +133,17 @@ DIT clear. A guard that set DIT clears it at its end anyway; one that found it
 set sets it again at its end, so that the thread's state after the guard is the
 state before it. Code that catches an exception inside a guarded scope and then
 computes on a secret holds a guard of its own after the catch, which sets DIT
-again for its scope.
+again for its scope. Code that catches inside a guarded scope and returns to
+code that cannot hold a guard (a C library's callback, as webcpp::crypto's
+OpenSSL memory adapter) holds, around its `try`, a guard engaged only when DIT
+is set, `secure::timing_guard const keep\{secure::dit_is_set()};`: it never sets
+DIT, and sets it again after the catch where it was set.
 * After a catch outside every guard, DIT is clear, guard or no guard: no
 destructor can change what the system does once the unwinding is over. A program
 that sets DIT for its own code and catches exceptions sets it again after the
 catch.
 
-On Apple's systems and Linux, DIT after a catch is as it was at the throw.
+On Apple's systems and Linux, DIT after a catch is as the unwinding left it.
 `test/timing_guard_exceptions_test.cpp` checks all of this on every target, with
 exceptions on and off.
 

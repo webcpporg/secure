@@ -6,10 +6,13 @@
 
 // A 4-bit value to its hex character and back without a branch or a table index that depends on the
 // value, by is_in_range_mask and select: libsodium's method for sodium_bin2hex and sodium_hex2bin,
-// the shape of every codec that turns a secret into text.
+// the shape of every codec that turns a secret into text. On 64-bit ARM the blocks' time is
+// independent of their data only with DIT set, so the computation runs inside a
+// secure::timing_guard, which sets DIT where the CPU has it.
 
 // tag::example[]
 #include <webcpp/secure/constant_time.hpp>
+#include <webcpp/secure/timing_guard.hpp>
 
 #include <cstdint>
 #include <iostream>
@@ -53,22 +56,26 @@ constexpr decoded hex_value(std::uint8_t character) {
 
 int main() {
     std::string text;
-    for (std::uint8_t nibble = 0; nibble < 16; ++nibble) {
-        text += static_cast<char>(hex_character(nibble));
+    bool round_trip = true;
+    decoded upper{};
+    decoded bad{};
+    {
+        // DIT set for the blocks, on 64-bit ARM where the CPU has it; as found after the scope.
+        webcpp::secure::timing_guard const guard;
+        for (std::uint8_t nibble = 0; nibble < 16; ++nibble) {
+            text += static_cast<char>(hex_character(nibble));
+        }
+        for (std::uint8_t nibble = 0; nibble < 16; ++nibble) {
+            decoded const back = hex_value(hex_character(nibble));
+            round_trip = round_trip && back.value == nibble && back.valid == 0xff;
+        }
+        upper = hex_value('C');
+        bad = hex_value('g');
     }
     std::cout << "encoded: " << text << '\n';
-
-    bool round_trip = true;
-    for (std::uint8_t nibble = 0; nibble < 16; ++nibble) {
-        decoded const back = hex_value(hex_character(nibble));
-        round_trip = round_trip && back.value == nibble && back.valid == 0xff;
-    }
     std::cout << "round trip of all 16: " << (round_trip ? "yes" : "NO") << '\n';
-
-    decoded const upper = hex_value('C');
     std::cout << "'C': value " << static_cast<unsigned>(upper.value) << ", valid "
               << (upper.valid == 0xff ? "yes" : "no") << '\n';
-    decoded const bad = hex_value('g');
     std::cout << "'g': valid " << (bad.valid == 0xff ? "yes" : "no") << '\n';
     return round_trip && upper.value == 12 && bad.valid == 0 ? 0 : 1;
 }

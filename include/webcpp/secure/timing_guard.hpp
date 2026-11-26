@@ -20,7 +20,7 @@
  *
  * Some functions are keyed only by their arguments (a BLAKE2b digest of a call that passes a key),
  * and an unkeyed call computes on public data and must not pay for DIT: such a function constructs
- * the guard with `engaged` false when the call is not keyed. A disengaged guard sets nothing,
+ * the guard with `guard_engaged` false when the call is not keyed. A disengaged guard sets nothing,
  * clears nothing and runs no seam, on every target.
  *
  * The guard applies on arm64 under macOS, iOS, Linux and Android, where the system says whether

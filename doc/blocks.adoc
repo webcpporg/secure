@@ -137,8 +137,8 @@ the source:
   silicon), MSVC 14.5's `lookup` over 64 entries, whose machine code has no
   branch and no load indexed by the secret (a mask from `eor`, `sub`, `bic` and
   `neg`, the barrier's store and load, then `and` and `orr` into the result, for
-  each entry), gave a dudect `|t|` of 12 to 17 between index 0 and random
-  indexes with DIT clear, and 1 to 3 with DIT set, the program otherwise the
+  each entry), gave a dudect `|t|` of 11 to 17.5 between index 0 and random
+  indexes with DIT clear, and under 3 with DIT set, the program otherwise the
   same (2026-11-25). Every function of webcpp that computes on a secret holds a
   guard, so the blocks it calls run with DIT set; a program that calls the
   blocks on its own secrets holds one too (<<secure-guard>>), and the lane's

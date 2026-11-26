@@ -26,7 +26,8 @@ int main() {
         secure::timing_guard const guard;
         inside = secure::dit_is_set();
         {
-            // A guard that finds DIT set does nothing, and leaves it set.
+            // A guard that finds DIT set leaves it set, and at its end sets it again if
+            // something inside its scope cleared it.
             secure::timing_guard const inner;
             nested_inside = secure::dit_is_set();
         }
