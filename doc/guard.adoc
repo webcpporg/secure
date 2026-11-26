@@ -136,7 +136,7 @@ computes on a secret holds a guard of its own after the catch, which sets DIT
 again for its scope. Code that catches inside a guarded scope and returns to
 code that cannot hold a guard (a C library's callback, as webcpp::crypto's
 OpenSSL memory adapter) holds, around its `try`, a guard engaged only when DIT
-is set, `secure::timing_guard const keep\{secure::dit_is_set()};`: it never sets
+is set, `secure::timing_guard const keep{secure::dit_is_set()};`: it never sets
 DIT, and sets it again after the catch where it was set.
 * After a catch outside every guard, DIT is clear, guard or no guard: no
 destructor can change what the system does once the unwinding is over. A program
