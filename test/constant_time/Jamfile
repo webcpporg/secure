@@ -1,0 +1,127 @@
+# Copyright (c) 2026 WebCpp.org
+#
+# Distributed under the Boost Software License, Version 1.0. (See
+# accompanying file LICENSE_1_0.txt or copy at
+# https://www.boost.org/LICENSE_1_0.txt)
+
+# Constant time: Valgrind's memcheck and MemorySanitizer on Linux, and dudect's
+# statistics natively, as the own lane constant-time, outside the ordinary
+# lanes. Both checkers run the same paths, paths.hpp: every block of
+# constant_time.hpp on std::uint8_t, std::uint32_t and std::uint64_t, the byte
+# blocks, constant_time_equal and secret<32>'s moves, clone and destruction,
+# each with its operands marked secret. Each checker is shown to fail on
+# planted leaks, each in a function of its own that the report must name: a
+# select that branches on its mask, a lookup that indexes its table, and, for
+# memcheck, a branch on constant_time_equal's verdict that was never
+# declassified; dudect to find one, an early-exit comparison
+# (dudect_planted).
+#
+# The lane's programs are native only, each one build of its checker: they are
+# not declared through test/Jamfile's secure-run, and have no _no_exceptions
+# twins (this is a project of its own, where that rule is not visible, and a
+# checker's build is a release build of one configuration).
+project : requirements <library>/webcpp/secure//secure ;
+
+import webcpp os ;
+
+webcpp.targets native ;
+
+webcpp.original node ;
+
+# Valgrind and MemorySanitizer run on Linux alone: elsewhere their programs
+# are not built, and the lane runs dudect alone.
+rule linux-only ( properties * )
+{
+    if ! <target-os>linux in $(properties)
+    {
+        return <build>no ;
+    }
+}
+
+# MemorySanitizer is clang's alone: its programs are built with clang on
+# Linux, and not with GCC (-fsanitize=memory is no option of GCC's).
+rule clang-on-linux ( properties * )
+{
+    if ! <target-os>linux in $(properties) || ! <toolset>clang in $(properties)
+    {
+        return <build>no ;
+    }
+}
+
+CTGRIND = <variant>release <debug-symbols>on <conditional>@linux-only
+    <define>WEBCPP_SECURE_CT_VALGRIND <webcpp-drive-timeout>300 ;
+
+webcpp.drive ctgrind : ctgrind_test.cpp : $(CTGRIND) : valgrind.mjs : : native ;
+# The blocks compile in the user's translation unit, so they are checked at
+# both optimisations: ctgrind is <variant>release, which is
+# <optimization>speed in b2, and ctgrind_space the other, a program of its
+# own, where an optimiser may if-convert a mask differently.
+webcpp.drive ctgrind_space : ctgrind_test.cpp : $(CTGRIND) <optimization>space
+  : valgrind.mjs : : native ;
+# The planted leaks, each run before every path: memcheck must report each in
+# its own function (valgrind.mjs --in). The same source, its own define, and
+# each but the first its own directory (<location-prefix>), or b2 would link
+# another's objects.
+webcpp.drive ctgrind_planted_select : ctgrind_planted_test.cpp
+  : $(CTGRIND) <define>WEBCPP_TEST_SECURE_PLANTED_SELECT
+  : valgrind.mjs : --expect-leak --in planted_select : native ;
+webcpp.drive ctgrind_planted_lookup : ctgrind_planted_test.cpp
+  : $(CTGRIND) <define>WEBCPP_TEST_SECURE_PLANTED_LOOKUP <location-prefix>ctgrind_planted_lookup
+  : valgrind.mjs : --expect-leak --in planted_lookup : native ;
+webcpp.drive ctgrind_planted_verdict : ctgrind_planted_test.cpp
+  : $(CTGRIND) <define>WEBCPP_TEST_SECURE_PLANTED_VERDICT
+    <location-prefix>ctgrind_planted_verdict
+  : valgrind.mjs : --expect-leak --in planted_verdict : native ;
+
+# MemorySanitizer's checking of what a function is passed and returns, eager
+# since clang 16, is off: a value derived from a secret is passed and returned
+# by design, and only a branch or an index on one is a leak.
+MSAN_FLAGS = -fsanitize=memory -fno-sanitize-memory-param-retval ;
+MSAN = <define>WEBCPP_SECURE_CT_MSAN <cxxflags>$(MSAN_FLAGS) <linkflags>-fsanitize=memory
+    <variant>release <debug-symbols>on <conditional>@clang-on-linux ;
+
+webcpp.run msan : msan_test.cpp : $(MSAN) : native ;
+# The planted leaks under MemorySanitizer: each passes only on its report whose
+# first frame is the planted function (msan_report.mjs --in). No planted
+# verdict: MemorySanitizer drops a subtraction's carry, and so takes
+# constant_time_equal's verdict for initialised (msan_test.cpp says why);
+# memcheck's ctgrind_planted_verdict shows that branch reported.
+webcpp.drive msan_planted_select : msan_planted_test.cpp
+  : $(MSAN) <define>WEBCPP_TEST_SECURE_PLANTED_SELECT
+  : msan_report.mjs : --in planted_select : native ;
+webcpp.drive msan_planted_lookup : msan_planted_test.cpp
+  : $(MSAN) <define>WEBCPP_TEST_SECURE_PLANTED_LOOKUP <location-prefix>msan_planted_lookup
+  : msan_report.mjs : --in planted_lookup : native ;
+
+# dudect's statistics on constant_time_equal, lookup, select_bytes and
+# less_mask, each with its A/A control, natively. The programs never set DIT
+# for a measurement: constant_time_equal holds secure's guard, which sets DIT
+# in each call on arm64 where the CPU has it, the other blocks are measured
+# inside one, as the guarded functions that call them run them (on 64-bit ARM
+# only DIT makes an instruction's time independent of its data: without it,
+# MSVC 14.5's lookup, branch-free and index-free, gave |t| 11 to 17.5 on
+# Windows on ARM64), and the program fails if DIT is set outside the calls, or
+# not set inside a guard (dudect.hpp). On a runner GitHub hosts, a virtual
+# machine shared with other tenants whose processor changes from run to run,
+# each |t| is printed and the program does not judge it: there it moved with
+# what the measurement cannot control (dudect.hpp, judged), so the CI's
+# dudect_judge.py warns at 10 and measures a case over 10 again in two fresh
+# processes, failing when two of the three are 10 or more. dudect_planted is
+# judged everywhere.
+DUDECT = <variant>release ;
+if [ os.environ RUNNER_ENVIRONMENT ] = github-hosted
+{
+    DUDECT += <define>WEBCPP_TEST_DUDECT_UNJUDGED ;
+}
+# Named dudect_blocks, not dudect: the CI's judge reads every dudect_*.output.
+webcpp.run dudect_blocks : dudect_test.cpp : $(DUDECT) : native ;
+webcpp.run dudect_planted : dudect_planted_test.cpp : <variant>release : native ;
+
+# dudect.hpp itself, on synthetic data and without timing: the statistics, the
+# A/A control's preparation, --case and the lines the CI's judge reads.
+webcpp.run dudect_harness : dudect_harness_test.cpp : : native ;
+
+webcpp.lane constant-time : ctgrind ctgrind_space ctgrind_planted_select
+    ctgrind_planted_lookup ctgrind_planted_verdict msan msan_planted_select
+    msan_planted_lookup dudect_blocks dudect_planted dudect_harness
+  : native ;

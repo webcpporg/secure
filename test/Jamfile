@@ -1,0 +1,116 @@
+# Copyright (c) 2026 WebCpp.org
+#
+# Distributed under the Boost Software License, Version 1.0. (See
+# accompanying file LICENSE_1_0.txt or copy at
+# https://www.boost.org/LICENSE_1_0.txt)
+
+project : requirements <library>/webcpp/secure//secure ;
+
+import webcpp ;
+
+webcpp.targets native wasip2 wasip3 emscripten ;
+
+# Every program that runs, runs with exceptions on and off, and every check
+# that compiles, compiles both ways: the second has the suffix _no_exceptions
+# and is built with exception-handling=off.
+rule secure-run ( name : sources + : requirements * : targets * )
+{
+    webcpp.run $(name) : $(sources) : $(requirements) : $(targets) ;
+    webcpp.run $(name)_no_exceptions : $(sources)
+      : $(requirements) <exception-handling>off : $(targets) ;
+}
+rule secure-compile ( name : sources + : requirements * : targets * )
+{
+    webcpp.compile $(name) : $(sources) : $(requirements) : $(targets) ;
+    webcpp.compile $(name)_no_exceptions : $(sources)
+      : $(requirements) <exception-handling>off : $(targets) ;
+}
+
+webcpp.headers-alone secure : ../include ;
+
+# <webcpp/secure/timing_guard.hpp> compiles first and alone, brings config.hpp,
+# and defines WEBCPP_SECURE_TIMING_COVERED exactly where the guard acts.
+secure-compile timing_guard_header : timing_guard_header_test.cpp ;
+# webcpp::secure::timing_guard, the one DIT guard of webcpp's libraries: it
+# sets DIT for its scope where the CPU has it and leaves the thread's state as
+# it found it; disengaged, it does nothing; nested, in every order; its seam
+# names the guard's function and file; another thread's DIT is untouched
+# (natively, with threads). On a target it does not cover, it is empty.
+secure-run timing_guard : timing_guard_test.cpp ;
+secure-run timing_guard_nesting : timing_guard_nesting_test.cpp ;
+secure-run timing_guard_seam : timing_guard_seam_test.cpp ;
+secure-run timing_guard_threads : timing_guard_threads_test.cpp
+  : <threading>multi : native ;
+# Windows on ARM64: FEAT_DIT read once by an SEH-guarded read of the register,
+# the guard set and kept across sleeps (the Windows ARM64 lane, MSVC 14.3 and
+# 14.5); on every other target, the empty guard.
+secure-run timing_guard_windows : timing_guard_windows_test.cpp ;
+# A guard leaves DIT as it found it also when its scope changed DIT (as a catch
+# does on Windows on ARM64, which clears DIT on resuming after any catch) and
+# when an exception ends its scope: nested, in every order, from clear and from
+# set; after a catch outside every guard, DIT is what the system leaves.
+secure-run timing_guard_exceptions : timing_guard_exceptions_test.cpp ;
+# The test support's recorder: what it counts, and which paths are secure's.
+secure-run timing_seam_support : timing_seam_support_test.cpp ;
+
+# config.hpp defines WEBCPP_SECURE_NO_EXCEPTIONS exactly when webcpp has no
+# exceptions, keeps it when a developer defines it, and defines it when
+# WEBCPP_NO_EXCEPTIONS is.
+webcpp.compile config : config_test.cpp ;
+webcpp.compile config_no_exceptions : config_test.cpp : <exception-handling>off ;
+webcpp.compile config_all_off : config_test.cpp
+  : <define>WEBCPP_NO_EXCEPTIONS <define>WEBCPP_TEST_SECURE_ALL_OFF ;
+webcpp.compile config_developer_defined : config_test.cpp
+  : <define>WEBCPP_SECURE_NO_EXCEPTIONS <define>WEBCPP_TEST_SECURE_DEVELOPER_DEFINED ;
+
+OPTIMISED = <optimization>speed <toolset>emscripten:<debug-symbols>off ;
+# secure::erase_secret zeroes the bytes of any contiguous range the program may
+# write, and a buffer erased as its scope ends stays zero: optimised, with every
+# call inlined, where a wipe the compiler could drop as a dead store would be.
+secure-run erase_secret : erase_secret_test.cpp : $(OPTIMISED) <inlining>full ;
+# secret<N>: not copyable, moves wipe the source, the destructor wipes the
+# storage; optimised and inlined as erase_secret's.
+secure-run secret : secret_test.cpp : $(OPTIMISED) <inlining>full ;
+# The wipe's test seam (B9): every wipe reported once, its bytes already zero.
+secure-run wipe_record : wipe_record_test.cpp
+  : <define>WEBCPP_SECURE_TEST_WIPE_RECORD ;
+# constant_time_equal over any two byte sequences, its guard through the seam.
+secure-run constant_time_equal : constant_time_equal_test.cpp ;
+# The constant-time building blocks against a plain reference: every pair and
+# triple of bytes, edges and random values of 16, 32 and 64 bits, lookup past
+# its table, the byte comparisons against the standard algorithms.
+secure-run constant_time : constant_time_test.cpp ;
+# With the size assertion off, the byte blocks given unequal sizes read and
+# write nothing and give the zero mask.
+secure-run constant_time_sizes : constant_time_sizes_test.cpp
+  : <define>BOOST_DISABLE_ASSERTS ;
+# declassify with the memcheck build's marks, on every lane, against a stand-in
+# for Valgrind's header; and with MemorySanitizer's under clang natively.
+secure-run declassify_compile : declassify_compile_test.cpp
+  : <define>WEBCPP_SECURE_CT_VALGRIND <include>support/valgrind_stub ;
+secure-compile declassify_compile_msan : declassify_compile_test.cpp
+  : <define>WEBCPP_SECURE_CT_MSAN <toolset>gcc:<build>no <toolset>msvc:<build>no
+  : native ;
+
+# No function of the library allocates: under support/counting.hpp's
+# replacement of every form of operator new (and the C library's allocator
+# where a program can count it), every function of every header leaves the
+# count where it was.
+secure-run allocation : allocation_test.cpp ;
+# <webcpp/secure.hpp> alone brings every header, one name of each used.
+secure-run convenience_header : convenience_header_test.cpp ;
+# No local name in a header hides a program's global: every public header after
+# a global of each one-word name a header's local once had, which MSVC's C4459
+# reports at /W4 /WX (clang and GCC never warn across namespaces).
+secure-run user_globals : user_globals_test.cpp : : native ;
+# With timing_guard's seam, its own parameter, which only the seam compiles.
+secure-run user_globals_seam : user_globals_test.cpp
+  : <define>WEBCPP_TEST_SECURE_USER_GLOBALS_SEAM : native ;
+
+build-project messages ;
+# On MSVC, each message stops the build (test/msvc); elsewhere nothing is built.
+build-project msvc ;
+# The guard's cost: the correctness test of the program collect.py measures.
+build-project ../bench ;
+# The own lane constant-time: memcheck, MemorySanitizer and dudect.
+build-project constant_time ;

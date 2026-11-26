@@ -1,0 +1,5 @@
+same tag: equal
+last byte flipped: different
+a truncated tag: different
+text and bytes: equal
+secret and array: equal

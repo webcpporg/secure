@@ -1,0 +1,39 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#secure-declassify]
+== Marking a verdict public: `declassify`
+
+Constant-time code is checked by tools that follow a secret through a program
+and report every branch or index that depends on it: Valgrind's memcheck, with
+the secret's bytes marked uninitialised (the technique is called ctgrind), and
+MemorySanitizer. Some branches on a value derived from secrets are the design:
+the verdict of a tag's check, `true` or `false`, is what the program acts on.
+The checker must not report that one, and must report every other.
+
+`declassify`, in `<webcpp/secure/declassify.hpp>`, marks such a value public:
+
+[source,cpp]
+----
+include::{examples}/compare.cpp[tag=verdict,indent=0]
+----
+
+In a program's build it does nothing and includes nothing: the value is
+unchanged and no header is read. A constant-time test defines
+`WEBCPP_SECURE_CT_VALGRIND` or `WEBCPP_SECURE_CT_MSAN` (not both), and the mark is
+then Valgrind's `VALGRIND_MAKE_MEM_DEFINED` or MemorySanitizer's
+`__msan_unpoison`. The value is never const, so that the branch that follows
+reads it again after the mark instead of a register the compiler kept from
+before it. It takes a trivially copyable object by reference.
+
+*Pitfalls.*
+
+* Declassify a verdict, never a secret. A secret declassified in a test's build
+  hides exactly the leak the test exists to find.
+* It is a statement about the code, for the checkers, and changes nothing in
+  the program's build: it does not make a leak safe.
+* A branch on an undeclassified verdict is reported by memcheck and not by
+  MemorySanitizer (<<secure-blocks-limits>>).

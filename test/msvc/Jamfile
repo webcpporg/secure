@@ -1,0 +1,22 @@
+# Copyright (c) 2026 WebCpp.org
+#
+# Distributed under the Boost Software License, Version 1.0. (See
+# accompanying file LICENSE_1_0.txt or copy at
+# https://www.boost.org/LICENSE_1_0.txt)
+
+# Each message of secure on MSVC, a directory per case: on the CI's msvc lanes
+# each case must fail to compile. Its text is checked on clang, by the message
+# test of the same name in test/messages; MSVC's is not checked
+# (CODING-GUIDELINES.md chapter 19). Elsewhere than MSVC nothing here is built:
+# the project's requirements make every case <build>no.
+rule msvc-only ( properties * )
+{
+    if ! ( <toolset>msvc in $(properties) )
+    {
+        return <build>no ;
+    }
+}
+
+project : requirements <conditional>@msvc-only ;
+
+build-project secret_of_no_bytes ;

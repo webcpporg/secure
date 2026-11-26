@@ -1,0 +1,27 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[appendix]
+[#secure-changelog]
+== Changelog
+
+What changed in secure in each version of webcpp, newest first, one line
+per change. "Unreleased" is what the next version brings. The release notes
+of every version are on webcpp's index page.
+
+[#secure-changelog-unreleased]
+=== Unreleased
+
+// tag::unreleased[]
+* Added webcpp::secure's skeleton and configuration: config.hpp, WEBCPP_SECURE_NO_EXCEPTIONS.
+* Added timing_guard.hpp: the one DIT guard of webcpp's libraries, engaged or not, nested in any order, with a seam for tests, on arm64 under Apple, Linux, Android and Windows.
+* Added erase_secret.hpp: erase_secret, which zeroes any contiguous trivially copyable range with stores the optimiser keeps, and the wipe's test seam WEBCPP_SECURE_TEST_WIPE_RECORD.
+* Added constant_time_equal.hpp: constant_time_equal, over any two byte sequences, a secret<N> included.
+* Added secret.hpp: secret<N>, N bytes that wipe themselves on destruction and on move.
+* Added declassify.hpp: declassify, the mark of a verdict for the constant-time checkers, WEBCPP_SECURE_CT_VALGRIND and WEBCPP_SECURE_CT_MSAN.
+* Added constant_time.hpp: value_barrier, the masks, select, lookup and the byte comparisons of webcpp::secure::constant_time.
+* Added secure.hpp, which includes every header, and the guide, whose figure for the guard's cost is measured from a release build.
+// end::unreleased[]

@@ -1,0 +1,29 @@
+# Copyright (c) 2026 WebCpp.org
+#
+# Distributed under the Boost Software License, Version 1.0. (See
+# accompanying file LICENSE_1_0.txt or copy at
+# https://www.boost.org/LICENSE_1_0.txt)
+
+# The cost of timing_guard, the scope every function of webcpp that computes on
+# a secret runs in (timing.cpp, doc/performance.adoc). timing_check is the
+# correctness test of the measured program, run in every lane of test/
+# (test/Jamfile builds this project): the measurement at 10^3 iterations, its
+# line's form and the thread's DIT checked, never timed against anything. It
+# needs no backend: <webcpp/secure/timing_guard.hpp> alone. The measurement
+# itself is made by hand by collect.py, which runs the program built here at
+# variant=release and writes doc/measurements.json and doc/performance.adoc;
+# no lane measures it.
+
+project : requirements <library>/webcpp/secure//secure ;
+
+import webcpp ;
+
+webcpp.targets native wasip2 wasip3 emscripten ;
+
+webcpp.run timing_check : timing.cpp ;
+webcpp.run timing_check_no_exceptions : timing.cpp : <exception-handling>off ;
+
+# The same program at variant=release, the one collect.py --timing measures,
+# natively and by hand (doc/performance.adoc); no lane measures it.
+exe timing : timing.cpp : <variant>release <library>/webcpp//node-test ;
+explicit timing ;

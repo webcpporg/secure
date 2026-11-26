@@ -1,0 +1,10 @@
+{
+    "key": "secure",
+    "name": "secure",
+    "authors": ["R"],
+    "description": "The side-channel and secret-in-memory primitives webcpp's libraries share: the DIT timing guard, erase_secret, secret<N>, constant_time_equal, declassify and constant-time building blocks, no algorithm.",
+    "category": ["Cryptography"],
+    "maintainers": ["R <github.overboard312@passmail.net>"],
+    "cxxstd": "20",
+    "port-of": null
+}

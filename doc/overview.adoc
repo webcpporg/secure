@@ -1,0 +1,79 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#secure-overview]
+== What secure is, and is not
+
+A program that handles a secret leaks it in two ways that have nothing to do
+with the algorithm: through *time* and *memory access* (a comparison that stops
+at the first byte that differs, a branch or an index that depends on a key), and
+through *memory* (a key left in a buffer after its use, where a crash dump, a
+swapped page or a later bug that reads freed memory finds it). secure is the
+small set of tools that closes both, in one place, so that
+webcpp's libraries do not each carry a copy: crypto, hash and the codecs use it,
+and so can a program.
+
+secure is *not* a cryptographic library. It holds no cipher, no hash, no
+signature and no key derivation: choose those in crypto and hash. It does not
+make a program's secrets safe by being included; it gives the primitives that
+a careful implementation of an algorithm needs, and says, for each, what it
+covers and what it does not.
+
+[cols="3,3,4",options="header"]
+|===
+| Name | Header | What it is for
+
+| `timing_guard`, `cpu_has_dit`, `dit_is_set`
+| `<webcpp/secure/timing_guard.hpp>`
+| sets 64-bit ARM's DIT bit for the scope of a secret computation (<<secure-guard>>)
+
+| `erase_secret`
+| `<webcpp/secure/erase_secret.hpp>`
+| zeroes a buffer the program owns, with stores the optimiser keeps (<<secure-erase-secret>>)
+
+| `secret<N>`
+| `<webcpp/secure/secret.hpp>`
+| `N` secret bytes that wipe themselves (<<secure-secret>>)
+
+| `constant_time_equal`
+| `<webcpp/secure/constant_time_equal.hpp>`
+| compares two byte sequences, a tag or a MAC, in a time that does not depend on them (<<secure-constant-time-equal>>)
+
+| `declassify`
+| `<webcpp/secure/declassify.hpp>`
+| marks a verdict public for the constant-time checkers (<<secure-declassify>>)
+
+| `constant_time::*`
+| `<webcpp/secure/constant_time.hpp>`
+| masks, `select`, `lookup` and byte comparisons that do not branch on their values (<<secure-blocks>>)
+
+| every name above
+| `<webcpp/secure.hpp>`
+| the convenience header, which includes each of the others
+|===
+
+secure is header-only, depends on webcpp's config library and on Boost's
+assert and no other library, and allocates nothing: no function of it
+allocates, which a test that counts every form of `operator new` and the C
+library's allocator checks. A program names `/webcpp/secure//secure` in its
+Jamfile, as it names any library of webcpp:
+
+[listing]
+----
+exe app : app.cpp /webcpp/secure//secure ;
+----
+
+Every name is in `webcpp::secure` (the blocks in `webcpp::secure::constant_time`),
+and `webcpp::secure::detail` is not API: no header of another library includes
+a header of `detail/`.
+
+[#secure-exceptions]
+== Exceptions
+
+secure raises no exception: every function is `noexcept`. It builds the same
+with exceptions on and off, and `WEBCPP_SECURE_NO_EXCEPTIONS` is defined when
+webcpp has none, or when a program defines it alone. Every test of secure runs
+both ways.
