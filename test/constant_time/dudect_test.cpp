@@ -9,12 +9,18 @@
 // indexes, over 64 entries), select_bytes's against its mask (0x00, against 0xFF) and less_mask's
 // against its second argument (equal 32-byte inputs, against a random second). Each case is
 // measured once more as its A/A control (<case>_aa), both classes the class 0 input, prepared by
-// the same instructions. `--case <name>` measures one case alone.
+// the same instructions. `--case <name>` measures one case alone. Each block runs inside a
+// secure::timing_guard, as in the guarded functions that call it, which sets DIT where the CPU has
+// it (constant_time_equal holds its own): on 64-bit ARM only DIT makes the instructions' time
+// independent of their data. Without it, lookup's machine code, branch-free and index-free, gave
+// |t| 12 to 17 under MSVC 14.5 on the Windows 11 ARM64 machine (Apple silicon), and 1 to 3 with
+// DIT set, the same instructions otherwise (2026-11-25; secure's blocks page).
 
 #include "dudect.hpp"
 
 #include <webcpp/secure/constant_time.hpp>
 #include <webcpp/secure/constant_time_equal.hpp>
+#include <webcpp/secure/timing_guard.hpp>
 
 #include <array>
 #include <cstddef>
@@ -148,7 +154,10 @@ int main(int argc, char** argv) {
             test::choose<Control>(which, generator, index_zero, index_byte);
             index = index_byte[0] & 63U;
         },
-        [&] { entry_sink = ct::lookup(std::span<std::uint32_t const, 64>(table), index); },
+        [&] {
+            webcpp::secure::timing_guard const guard;
+            entry_sink = ct::lookup(std::span<std::uint32_t const, 64>(table), index);
+        },
         {{"table", table.data()}, {"index", &index}});
 
     // select_bytes: the mask 0x00, against 0xFF.
@@ -164,6 +173,7 @@ int main(int argc, char** argv) {
         results, *selection, "select_bytes",
         [&]<bool Control>(int which, auto&) { pick<Control>(which, mask_clear, mask_set, mask); },
         [&] {
+            webcpp::secure::timing_guard const guard;
             ct::select_bytes(mask[0], destination, when_set, when_clear);
             byte_sink = destination[0];
         },
@@ -178,7 +188,10 @@ int main(int argc, char** argv) {
         [&]<bool Control>(int which, auto& generator) {
             test::choose<Control>(which, generator, less_first, less_second);
         },
-        [&] { byte_sink = ct::less_mask(less_first, less_second); },
+        [&] {
+            webcpp::secure::timing_guard const guard;
+            byte_sink = ct::less_mask(less_first, less_second);
+        },
         {{"first", less_first.data()}, {"second", less_second.data()}});
 
     static_cast<void>(sink);

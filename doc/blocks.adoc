@@ -103,7 +103,8 @@ the source:
 * *MemorySanitizer* does the same on clang, over every block.
 * *dudect*, natively, a statistical test of the running time on two classes of
   input, over `constant_time_equal`, `lookup`, `select_bytes` and `less_mask`,
-  with a control of two identical classes that must pass.
+  with a control of two identical classes that must pass. Each block runs inside
+  a `timing_guard`, as in the guarded functions that call it (below).
 * Each checker runs planted leaks that it must report: memcheck and
   MemorySanitizer a `select` written with a branch and a `lookup` that indexes
   (memcheck also a branch on an undeclassified verdict), dudect a comparison
@@ -129,6 +130,19 @@ the source:
 * *The guard covers DIT's instructions, not memory access patterns or
   branches* (<<secure-guard-limits>>): a block that was compiled to a branch is
   not saved by DIT.
+* *On 64-bit ARM, the blocks' time is independent of their data only with DIT
+  set.* Branch-free and index-free code is not enough: Arm promises a time
+  independent of the operands only for the instructions it lists, and only with
+  DIT set. Measured on the Windows 11 ARM64 machine of the MSVC lane (Apple
+  silicon), MSVC 14.5's `lookup` over 64 entries, whose machine code has no
+  branch and no load indexed by the secret (a mask from `eor`, `sub`, `bic` and
+  `neg`, the barrier's store and load, then `and` and `orr` into the result, for
+  each entry), gave a dudect `|t|` of 12 to 17 between index 0 and random
+  indexes with DIT clear, and 1 to 3 with DIT set, the program otherwise the
+  same (2026-11-25). Every function of webcpp that computes on a secret holds a
+  guard, so the blocks it calls run with DIT set; a program that calls the
+  blocks on its own secrets holds one too (<<secure-guard>>), and the lane's
+  dudect measures them inside one.
 * *dudect is statistical.* It can show a leak, with a large `|t|`, and cannot
   prove there is none: a run that stays under its threshold, as the lane's do,
   is the absence of evidence of a leak at that number of measurements.

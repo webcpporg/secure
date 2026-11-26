@@ -66,7 +66,8 @@ inline void serialise() noexcept {
  * PSTATE.DIT, and whether the measurements may go on. The harness never sets DIT for the
  * measurements: `constant_time_equal` sets it in each call through secure's guard
  * (`secure::timing_guard`), and the lane measures that, what a program gets; the blocks hold no
- * guard, and a caller that wants DIT over them holds its own. Where the CPU has DIT, the line
+ * guard, and dudect_blocks measures each inside one, as the guarded functions that call them run
+ * them. Where the CPU has DIT, the line
  * also shows the guard at work, once, before any measurement: DIT set inside a guard's scope and
  * clear again after it. It must be clear on this thread outside the calls, or the timings would
  * be those of a DIT the program set itself, not the guard's.
@@ -90,8 +91,8 @@ inline bool report_data_independent_timing() noexcept {
     bool const set_after = secure::dit_is_set();
     bool const outside_set = set_before || set_after;
     std::printf(
-        "DIT (data-independent timing): the CPU has it; secure's guard sets it in each call of "
-        "constant_time_equal, the harness does not (%s inside a guard; %s)\n",
+        "DIT (data-independent timing): the CPU has it; secure's guard sets it in each measured "
+        "call, the harness does not (%s inside a guard; %s)\n",
         set_inside ? "set" : "NOT set",
         outside_set ? "set on this thread outside the calls: not measured"
                     : "clear on this thread outside the calls");

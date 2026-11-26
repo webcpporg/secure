@@ -96,9 +96,12 @@ webcpp.drive msan_planted_lookup : msan_planted_test.cpp
 # dudect's statistics on constant_time_equal, lookup, select_bytes and
 # less_mask, each with its A/A control, natively. The programs never set DIT
 # for a measurement: constant_time_equal holds secure's guard, which sets DIT
-# in each call on macOS and Linux on arm64 where the CPU has it, and the
-# program fails if DIT is set outside the calls, or not set inside a guard
-# (dudect.hpp). On a runner GitHub hosts, a virtual machine shared with other
+# in each call on arm64 where the CPU has it, the other blocks are measured
+# inside one, as the guarded functions that call them run them (on 64-bit ARM
+# only DIT makes an instruction's time independent of its data: without it,
+# MSVC 14.5's lookup, branch-free and index-free, gave |t| 12 to 17 on Windows
+# on ARM64), and the program fails if DIT is set outside the calls, or not set
+# inside a guard (dudect.hpp). On a runner GitHub hosts, a virtual machine shared with other
 # tenants whose processor changes from run to run, each |t| is printed and the
 # program does not judge it: there it moved with what the measurement cannot
 # control (dudect.hpp, judged), so the CI's dudect_judge.py warns at 10 and
